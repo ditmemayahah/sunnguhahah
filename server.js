@@ -1,9 +1,7 @@
-// Server.js
-
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-// Giả sử file thuatoan.js vẫn nằm cùng thư mục
+// Import hàm dự đoán từ file thuatoan.js
 const { getPrediction } = require('./thuatoan.js');
 
 const app = express();
@@ -19,14 +17,14 @@ let apiResponseData = {
     tong: null,
     ketqua: "",
     prediction: "?",
-    confidence: "0%"
+    tyledung: "0%"
 };
 
-// --- Biến quản lý trạng thái (tách biệt khỏi JSON trả về) ---
+// --- Biến quản lý trạng thái ---
 const MAX_HISTORY_SIZE = 1000;
 let currentSessionId = null;
-let lastPrediction = null; 
-const fullHistory = []; 
+let lastPrediction = "?";
+const fullHistory = [];
 let tong_dung = 0;
 let tong_sai = 0;
 
@@ -37,7 +35,7 @@ const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Origin": "https://play.sun.win"
 };
-const RECONNECT_DELAY = 2500;
+const RECONNECT_DELAY = 5000;
 const PING_INTERVAL = 15000;
 
 const initialMessages = [
@@ -46,13 +44,11 @@ const initialMessages = [
     [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
 ];
 
-
 // ===================================
 // === WebSocket Client ===
 // ===================================
 let ws = null;
 let pingInterval = null;
-let reconnectTimeout = null;
 
 function connectWebSocket() {
     if (ws) {
@@ -62,7 +58,7 @@ function connectWebSocket() {
     ws = new WebSocket(WEBSOCKET_URL, { headers: WS_HEADERS });
 
     ws.on('open', () => {
-        console.log('[✅] WebSocket connected.');
+        console.log('[✅] WebSocket đã kết nối.');
         initialMessages.forEach((msg, i) => {
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -74,34 +70,31 @@ function connectWebSocket() {
         }, PING_INTERVAL);
     });
 
-    ws.on('pong', () => console.log('[📶] Ping OK.'));
-
     ws.on('message', (message) => {
         try {
             const data = JSON.parse(message);
             if (!Array.isArray(data) || typeof data[1] !== 'object') return;
 
-            const { cmd, sid, d1, d2, d3, gBB } = data[1];
+            const { cmd, sid, d1, d2, d3 } = data[1];
 
             if (cmd === 1008 && sid) {
                 currentSessionId = sid;
             }
 
-            if (cmd === 1003 && gBB) {
-                if (!d1 || !d2 || !d3) return;
-
+            if (cmd === 1003 && d1 && d2 && d3) {
                 const total = d1 + d2 + d3;
                 const result = (total > 10) ? "Tài" : "Xỉu";
 
-                if (lastPrediction && lastPrediction !== "?") {
+                if (lastPrediction !== "?") {
                     if (lastPrediction === result) {
                         tong_dung++;
                     } else {
                         tong_sai++;
                     }
                 }
+
                 const totalGames = tong_dung + tong_sai;
-                const confidenceRate = totalGames === 0 ? "0%" : `${((tong_dung / totalGames) * 100).toFixed(0)}%`;
+                const winRate = totalGames === 0 ? "0%" : `${((tong_dung / totalGames) * 100).toFixed(0)}%`;
 
                 const historyEntry = { session: currentSessionId, d1, d2, d3, totalScore: total, result };
                 fullHistory.push(historyEntry);
@@ -109,34 +102,36 @@ function connectWebSocket() {
                     fullHistory.shift();
                 }
 
+                // Gọi hàm dự đoán từ thuatoan.js
                 const { prediction } = getPrediction(fullHistory);
 
+                // Cập nhật dữ liệu để trả về qua API
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xucxac = [d1, d2, d3];
                 apiResponseData.tong = total;
                 apiResponseData.ketqua = result;
                 apiResponseData.prediction = prediction;
-                apiResponseData.confidence = confidenceRate;
+                apiResponseData.tyledung = winRate;
 
+                // Lưu lại dự đoán cho phiên tiếp theo
                 lastPrediction = prediction;
                 currentSessionId = null;
 
-                console.log(`Phiên #${apiResponseData.phien}: ${apiResponseData.tong} (${result}) | Dự đoán mới: ${prediction} | Tỷ lệ: ${apiResponseData.confidence}`);
+                console.log(`Phiên #${apiResponseData.phien}: ${apiResponseData.tong} (${result}) | Dự đoán mới: ${prediction} | Tỷ lệ đúng: ${winRate}`);
             }
         } catch (e) {
             console.error('[❌] Lỗi xử lý message:', e.message);
         }
     });
 
-    ws.on('close', (code, reason) => {
-        console.log(`[🔌] WebSocket closed. Code: ${code}, Reason: ${reason.toString()}. Reconnecting...`);
+    ws.on('close', () => {
+        console.log(`[🔌] WebSocket đã đóng. Đang kết nối lại sau ${RECONNECT_DELAY / 1000} giây...`);
         clearInterval(pingInterval);
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = setTimeout(connectWebSocket, RECONNECT_DELAY);
+        setTimeout(connectWebSocket, RECONNECT_DELAY);
     });
 
     ws.on('error', (err) => {
-        console.error('[❌] WebSocket error:', err.message);
+        console.error('[❌] Lỗi WebSocket:', err.message);
         ws.close();
     });
 }
@@ -144,8 +139,6 @@ function connectWebSocket() {
 // ===================================
 // === API Endpoints ===
 // ===================================
-
-// <<< THAY ĐỔI Ở ĐÂY >>>
 app.get('/truongdong', (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(JSON.stringify(apiResponseData, null, 4));
@@ -165,15 +158,14 @@ app.get('/history', (req, res) => {
     res.send(html);
 });
 
-// <<< VÀ THAY ĐỔI Ở ĐÂY >>>
 app.get('/', (req, res) => {
-    res.send(`<h2>🎯 API Phân Tích Sunwin Tài Xỉu</h2><p>Xem kết quả JSON (định dạng dọc): <a href="/truongdong">/truongdong</a></p><p>Xem lịch sử 1000 phiên gần nhất: <a href="/history">/history</a></p>`);
+    res.send(`<h2>🎯 API Phân Tích Tài Xỉu</h2><p>Xem kết quả JSON: <a href="/truongdong">/truongdong</a></p><p>Xem lịch sử 1000 phiên gần nhất: <a href="/history">/history</a></p>`);
 });
 
 // ===================================
 // === Khởi động Server ===
 // ===================================
 app.listen(PORT, () => {
-    console.log(`[🌐] Server is running at http://localhost:${PORT}`);
+    console.log(`[🌐] Server đang chạy tại http://localhost:${PORT}`);
     connectWebSocket();
 });
