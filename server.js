@@ -340,7 +340,7 @@ class MasterPredictor {
      * Updates the predictor with the latest game result.
      * @param {{score: number, result: string}} newEntry - The score and result of the last game.
      */
-    async updateData({ score, result }) {
+    updateData({ score, result }) {
         this.scoreHistory.push(score);
         
         // To prevent memory leaks, keep the history to a reasonable size.
@@ -351,27 +351,22 @@ class MasterPredictor {
 
     /**
      * Generates a new prediction based on the entire history.
-     * @returns {Promise<{prediction: string, confidence: number}>}
+     * @returns {{prediction: string, confidence: number}}
      */
-    async predict() {
-        // ### THAY ĐỔI 1: Chỉ cần 3 phiên để bắt đầu dự đoán ###
+    predict() {
         if (this.scoreHistory.length < 3) {
             return { prediction: "?", confidence: 0 };
         }
 
         try {
-            // Run the full analysis using the history of dice totals.
             const analysisResult = this.analysisSystem.analyze(this.scoreHistory);
             
             let finalPrediction = "?";
             
-            // ### THAY ĐỔI 2: Đảo ngược logic dự đoán ###
-            // Nếu quyết định là 'buy' (thường là Tài), ta đổi thành Xỉu.
-            // Nếu quyết định là 'sell' (thường là Xỉu), ta đổi thành Tài.
             if (analysisResult.decision === 'buy') {
-                finalPrediction = "Xỉu"; // Đảo ngược từ Tài -> Xỉu
+                finalPrediction = "Tài"; 
             } else if (analysisResult.decision === 'sell') {
-                finalPrediction = "Tài"; // Đảo ngược từ Xỉu -> Tài
+                finalPrediction = "Xỉu"; 
             }
             
             return {
@@ -380,7 +375,7 @@ class MasterPredictor {
             };
         } catch (error) {
             console.error("[❌] Error during prediction:", error);
-            return { prediction: "?", confidence: 0 }; // Return safe default on error
+            return { prediction: "?", confidence: 0 }; 
         }
     }
 }
@@ -501,10 +496,10 @@ function connectWebSocket() {
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
                 // 1. Update the algorithm with the new result (total score and text result)
-                await predictor.updateData({ score: total, result: result });
+                predictor.updateData({ score: total, result: result });
                 
                 // 2. Get the next prediction from the algorithm
-                const predictionResult = await predictor.predict();
+                const predictionResult = predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
