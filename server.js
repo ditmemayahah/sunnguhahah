@@ -340,7 +340,7 @@ class MasterPredictor {
      * Updates the predictor with the latest game result.
      * @param {{score: number, result: string}} newEntry - The score and result of the last game.
      */
-    updateData({ score, result }) {
+    async updateData({ score, result }) {
         this.scoreHistory.push(score);
         
         // To prevent memory leaks, keep the history to a reasonable size.
@@ -351,22 +351,25 @@ class MasterPredictor {
 
     /**
      * Generates a new prediction based on the entire history.
-     * @returns {{prediction: string, confidence: number}}
+     * @returns {Promise<{prediction: string, confidence: number}>}
      */
-    predict() {
+    async predict() {
+        // THAY ĐỔI ĐIỀU KIỆN TỪ 10 VỀ 3
         if (this.scoreHistory.length < 3) {
             return { prediction: "?", confidence: 0 };
         }
 
         try {
+            // Run the full analysis using the history of dice totals.
             const analysisResult = this.analysisSystem.analyze(this.scoreHistory);
             
             let finalPrediction = "?";
             
+            // Map the generic algorithm decision ('buy'/'sell') to the game's specific outcomes.
             if (analysisResult.decision === 'buy') {
-                finalPrediction = "Tài"; 
+                finalPrediction = "Tài";
             } else if (analysisResult.decision === 'sell') {
-                finalPrediction = "Xỉu"; 
+                finalPrediction = "Xỉu";
             }
             
             return {
@@ -375,7 +378,7 @@ class MasterPredictor {
             };
         } catch (error) {
             console.error("[❌] Error during prediction:", error);
-            return { prediction: "?", confidence: 0 }; 
+            return { prediction: "?", confidence: 0 }; // Return safe default on error
         }
     }
 }
@@ -424,7 +427,7 @@ const PING_INTERVAL = 15000;
 
 // Dữ liệu initialMessages đã được cập nhật
 const initialMessages = [
-    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZXZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
+    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
     [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
     [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
 ];
@@ -496,10 +499,10 @@ function connectWebSocket() {
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
                 // 1. Update the algorithm with the new result (total score and text result)
-                predictor.updateData({ score: total, result: result });
+                await predictor.updateData({ score: total, result: result });
                 
                 // 2. Get the next prediction from the algorithm
-                const predictionResult = predictor.predict();
+                const predictionResult = await predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
