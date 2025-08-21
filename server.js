@@ -2,7 +2,7 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-// Thay đổi import để sử dụng hệ thống phân tích mới
+// SỬA Ở ĐÂY: Đổi tên class cho đúng với file thuatoan.js
 const { RobustCauAnalysisSystem } = require('./thuatoan.js');
 
 const app = express();
@@ -10,7 +10,7 @@ app.use(cors());
 const PORT = process.env.PORT || 5000;
 
 let apiResponseData = {
-    id: "CÓ CÁI LỒN",
+    id: "@gvt",
     phien: null,
     xuc_xac_1: null,
     xuc_xac_2: null,
@@ -23,9 +23,7 @@ let apiResponseData = {
     tong_sai: 0,
     ty_le_thang_lich_su: "0%",
     pattern: "",
-    tong_phien_da_phan_tich: 0,
-    // Thêm các trường mới để hiển thị thông tin từ thuật toán nếu cần
-    giai_thich: null 
+    tong_phien_da_phan_tich: 0
 };
 
 const MAX_HISTORY_SIZE = 1000;
@@ -33,7 +31,7 @@ let currentSessionId = null;
 let lastPrediction = null; 
 const fullHistory = []; 
 
-// Khởi tạo hệ thống phân tích mới
+// SỬA Ở ĐÂY: Khởi tạo đúng class
 const predictor = new RobustCauAnalysisSystem();
 
 const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
@@ -116,36 +114,17 @@ function connectWebSocket() {
                 fullHistory.push(historyEntry);
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
-                // === THAY ĐỔI LOGIC DỰ ĐOÁN ===
-                // Chuẩn bị dữ liệu đầu vào cho thuật toán mới
-                // Ở đây, ta sẽ dùng chuỗi lịch sử các tổng điểm
-                const analysisInput = fullHistory.map(h => h.totalScore);
-
-                // Lấy dự đoán mới từ thuật toán
-                // LƯU Ý: Lớp RobustCauAnalysisSystem cần được điều chỉnh để trả về 'Tài'/'Xỉu'
-                // Hiện tại, mã của bạn có thể trả về giá trị số hoặc 'buy'/'sell'.
-                // Bạn cần tùy chỉnh logic bên trong thuatoan.js để phù hợp với game Tài Xỉu.
-                // Giả định rằng `analyze` trả về một object có dạng { decision: 'Tài' | 'Xỉu', confidence: 0.85, explanation: {...} }
-                const predictionResult = predictor.analyze(analysisInput);
+                // Cập nhật thuật toán với dữ liệu mới (điểm và kết quả)
+                // Giả sử phương thức analyze cần dữ liệu mới để hoạt động
+                const predictionResult = predictor.analyze([{ score: total, result: result }]);
                 
                 let finalPrediction = "?";
                 let predictionConfidence = "0%";
                 
                 if (predictionResult && predictionResult.decision) {
-                    // Cần đảm bảo predictionResult.decision là "Tài" hoặc "Xỉu"
-                    // Tạm thời, ta sẽ chuyển đổi 'buy' -> 'Tài', 'sell' -> 'Xỉu'
-                    if (predictionResult.decision.toLowerCase() === 'buy') {
-                        finalPrediction = 'Tài';
-                    } else if (predictionResult.decision.toLowerCase() === 'sell') {
-                        finalPrediction = 'Xỉu';
-                    } else {
-                        finalPrediction = predictionResult.decision; // Nếu nó đã là 'Tài'/'Xỉu'
-                    }
-
+                    finalPrediction = predictionResult.decision; 
                     predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
-                    apiResponseData.giai_thich = predictionResult.explanation;
                 }
-                // ===================================
 
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xuc_xac_1 = d1;
@@ -164,7 +143,7 @@ function connectWebSocket() {
                 console.log(`Phiên #${apiResponseData.phien}: ${apiResponseData.tong} (${result}) | Dự đoán mới: ${finalPrediction} | Tin cậy: ${apiResponseData.do_tin_cay} | Tỷ lệ thắng: ${apiResponseData.ty_le_thang_lich_su}`);
             }
         } catch (e) {
-            console.error('[❌] Lỗi xử lý message:', e);
+            console.error('[❌] Lỗi xử lý message:', e.message);
         }
     });
 
