@@ -4,394 +4,386 @@ const express = require('express');
 const cors = require('cors');
 
 // ##################################################################
-// ############## START: THUẬT TOÁN MỚI CỦA BẠN #####################
+// ############## START: INTEGRATED ALGORITHM CODE ##################
 // ##################################################################
 
-let modelPredictions = {};
+// NOTE: Most of the classes below are complex scaffolds. 
+// Many core methods return placeholder values (e.g., empty arrays, 0, or fixed strings).
+// For the algorithm to be effective, these placeholder implementations need to be replaced with real logic.
 
-// Helper function: Detect streak and break probability
-function detectStreakAndBreak(history) {
-  if (!history || history.length === 0) return { streak: 0, currentResult: null, breakProb: 0.0 };
-  let streak = 1;
-  const currentResult = history[history.length - 1].result;
-  for (let i = history.length - 2; i >= 0; i--) {
-    if (history[i].result === currentResult) {
-      streak++;
-    } else {
-      break;
+class RobustCauAnalysisSystem {
+    constructor() {
+        this.dataManager = new DataManager();
+        this.coreAnalyzer = new CoreAnalyzer();
+        this.statisticalEngine = new StatisticalEngine();
+        this.mlAdapter = new MLAdapter();
+        this.strategyManager = new StrategyManager();
+        this.trendForecaster = new TrendForecaster();
+        this.riskManager = new RiskManager();
+        this.evaluationSystem = new EvaluationSystem();
+        this.robustnessModule = new RobustnessModule();
+        this.optimizationEngine = new OptimizationEngine();
+        
+        this.mainAI = new MainAI();
+        this.miniAI = new MiniAI();
+        this.advancedAI = new AdvancedAI();
+        
+        this.history = [];
+        this.performanceStats = {
+            accuracy: 0,
+            totalPredictions: 0,
+            correctPredictions: 0,
+            streakStats: {
+                currentWinStreak: 0,
+                currentLossStreak: 0,
+                maxWinStreak: 0,
+                maxLossStreak: 0
+            }
+        };
     }
-  }
-  const last15 = history.slice(-15).map(h => h.result);
-  if (!last15.length) return { streak, currentResult, breakProb: 0.0 };
-  const switches = last15.slice(1).reduce((count, curr, idx) => count + (curr !== last15[idx] ? 1 : 0), 0);
-  const taiCount = last15.filter(r => r === 'Tài').length;
-  const xiuCount = last15.filter(r => r === 'Xỉu').length;
-  const imbalance = Math.abs(taiCount - xiuCount) / last15.length;
-  let breakProb = 0.0;
 
-  if (streak >= 8) {
-    breakProb = Math.min(0.6 + (switches / 15) + imbalance * 0.15, 0.9); // Giảm breakProb
-  } else if (streak >= 5) {
-    breakProb = Math.min(0.35 + (switches / 10) + imbalance * 0.25, 0.85); // Giảm breakProb
-  } else if (streak >= 3 && switches >= 7) { // Tăng ngưỡng switches
-    breakProb = 0.3;
-  }
+    analyze(newData) {
+        const processedData = this.dataManager.processIncomingData(newData);
+        const miniAnalysis = this.miniAI.quickAnalyze(processedData);
+        const mainAnalysis = this.mainAI.comprehensiveAnalysis(processedData, this.history);
+        const advancedAnalysis = this.advancedAI.deepAnalysis(processedData, this.history);
+        const consolidatedResult = this.consolidateAnalyses(
+            miniAnalysis, 
+            mainAnalysis, 
+            advancedAnalysis
+        );
+        const finalDecision = this.makeFinalDecision(consolidatedResult);
+        this.updateLearningCycle(finalDecision, newData);
+        
+        return {
+            decision: finalDecision,
+            confidence: consolidatedResult.confidence,
+            explanation: this.generateExplanation(finalDecision, consolidatedResult),
+            timestamp: Date.now(),
+            analysisId: this.generateAnalysisId()
+        };
+    }
 
-  return { streak, currentResult, breakProb };
+    consolidateAnalyses(mini, main, advanced) {
+        const weights = this.calculateDynamicWeights();
+        return {
+            prediction: this.weightedAveragePrediction(mini, main, advanced, weights),
+            confidence: this.calculateCombinedConfidence(mini, main, advanced, weights),
+            patterns: this.mergePatterns(mini.patterns, main.patterns, advanced.patterns),
+            riskAssessment: this.mergeRisks(mini.risk, main.risk, advanced.risk),
+            trends: this.mergeTrends(mini.trends, main.trends, advanced.trends)
+        };
+    }
+    
+    // This is a placeholder as the underlying methods return placeholders.
+    weightedAveragePrediction(mini, main, advanced, weights) {
+         // Since 'main' contains the most detailed (though placeholder) logic, we'll default to its prediction.
+         return main.consolidated.prediction;
+    }
+    
+    calculateCombinedConfidence(mini, main, advanced, weights) {
+         // This is a placeholder implementation.
+         const conf = (main.consolidated.confidence * weights.main) + 
+                      (mini.confidence * weights.mini) + 
+                      (advanced.combined.confidence * weights.advanced);
+         return isNaN(conf) ? 0.5 : conf; // Return a default if calculation fails
+    }
+    
+    mergePatterns(p1 = [], p2 = [], p3 = []) { return [...new Set([...p1, ...p2, ...p3])]; }
+    mergeRisks(r1 = {}, r2 = {}, r3 = {}) { return {...r1, ...r2, ...r3 }; }
+    mergeTrends(t1 = {}, t2 = {}, t3 = {}) { return {...t1, ...t2, ...t3 }; }
+
+
+    calculateDynamicWeights() {
+        const perfMain = this.mainAI.getHistoricalPerformance();
+        const perfMini = this.miniAI.getHistoricalPerformance();
+        const perfAdvanced = this.advancedAI.getHistoricalPerformance();
+        const total = perfMain + perfMini + perfAdvanced;
+        if (total === 0) return { main: 0.4, mini: 0.2, advanced: 0.4 }; // Default weights
+        return {
+            main: perfMain / total,
+            mini: perfMini / total,
+            advanced: perfAdvanced / total
+        };
+    }
+
+    makeFinalDecision(consolidatedResult) {
+        const riskAdjusted = this.riskManager.adjustForRisk(consolidatedResult);
+        const strategy = this.strategyManager.selectOptimalStrategy(riskAdjusted);
+        return strategy.execute(riskAdjusted);
+    }
+
+    updateLearningCycle(decision, newData) {
+        const accuracy = this.evaluateAccuracy(decision, newData);
+        this.updatePerformanceStats(accuracy);
+        this.mlAdapter.trainWithNewData(newData, accuracy);
+        this.adjustParameters(accuracy);
+        this.history.push({
+            data: newData,
+            decision: decision,
+            accuracy: accuracy,
+            timestamp: Date.now()
+        });
+    }
+
+    evaluateAccuracy(decision, newData) {
+        return 0.8; // Placeholder
+    }
+
+    updatePerformanceStats(accuracy) {
+        this.performanceStats.totalPredictions++;
+        if (accuracy > 0.7) {
+            this.performanceStats.correctPredictions++;
+            this.performanceStats.streakStats.currentWinStreak++;
+            this.performanceStats.streakStats.currentLossStreak = 0;
+            if (this.performanceStats.streakStats.currentWinStreak > this.performanceStats.streakStats.maxWinStreak) {
+                this.performanceStats.streakStats.maxWinStreak = this.performanceStats.streakStats.currentWinStreak;
+            }
+        } else {
+            this.performanceStats.streakStats.currentLossStreak++;
+            this.performanceStats.streakStats.currentWinStreak = 0;
+            if (this.performanceStats.streakStats.currentLossStreak > this.performanceStats.streakStats.maxLossStreak) {
+                this.performanceStats.streakStats.maxLossStreak = this.performanceStats.streakStats.currentLossStreak;
+            }
+        }
+        this.performanceStats.accuracy = this.performanceStats.correctPredictions / this.performanceStats.totalPredictions;
+    }
+
+    adjustParameters(accuracy) {
+        const adjustmentFactor = accuracy - 0.5;
+        this.riskManager.adjustThresholds(adjustmentFactor);
+        this.robustnessModule.adjustSensitivity(adjustmentFactor);
+    }
+
+    generateExplanation(decision, analysis) {
+        return {
+            decisionReason: "Placeholder reason based on analysis.",
+            patternDescription: "No patterns detected (placeholder).",
+            riskFactors: "Standard risk factors apply (placeholder).",
+            confidenceFactors: "Confidence based on historical performance (placeholder)."
+        };
+    }
+
+    generateAnalysisId() {
+        return Date.now().toString(36) + Math.random().toString(36).substr(2);
+    }
 }
 
-// Helper function: Evaluate model performance
-function evaluateModelPerformance(history, modelName, lookback = 10) {
-  if (!modelPredictions[modelName] || history.length < 2) return 1.0;
-  lookback = Math.min(lookback, history.length - 1);
-  let correctCount = 0;
-  for (let i = 0; i < lookback; i++) {
-    const pred = modelPredictions[modelName][history[history.length - (i + 2)].session] || 0;
-    const actual = history[history.length - (i + 1)].result;
-    if ((pred === 1 && actual === 'Tài') || (pred === 2 && actual === 'Xỉu')) {
-      correctCount++;
+class DataManager {
+    processIncomingData(newData) {
+        return this.cleanData(newData);
     }
-  }
-  const performanceScore = lookback > 0 ? 1.0 + (correctCount - lookback / 2) / (lookback / 2) : 1.0;
-  return Math.max(0.5, Math.min(1.5, performanceScore)); // Giới hạn score để tránh lệch
+    cleanData(data) {
+        return data.filter(value => value !== null && value !== undefined && typeof value === 'number' && isFinite(value));
+    }
 }
 
-// Helper function: Smart bridge break model
-function smartBridgeBreak(history) {
-  if (!history || history.length < 3) return { prediction: 0, breakProb: 0.0, reason: 'Không đủ dữ liệu để bẻ cầu' };
-
-  const { streak, currentResult, breakProb } = detectStreakAndBreak(history);
-  const last20 = history.slice(-20).map(h => h.result);
-  const lastScores = history.slice(-20).map(h => h.totalScore || 0);
-  let breakProbability = breakProb;
-  let reason = '';
-
-  // Analyze score trends
-  const avgScore = lastScores.reduce((sum, score) => sum + score, 0) / (lastScores.length || 1);
-  const scoreDeviation = lastScores.reduce((sum, score) => sum + Math.abs(score - avgScore), 0) / (lastScores.length || 1);
-
-  // Detect specific bridge patterns
-  const last5 = last20.slice(-5);
-  const patternCounts = {};
-  for (let i = 0; i <= last20.length - 3; i++) {
-    const pattern = last20.slice(i, i + 3).join(',');
-    patternCounts[pattern] = (patternCounts[pattern] || 0) + 1;
-  }
-  const mostCommonPattern = Object.entries(patternCounts).sort((a, b) => b[1] - a[1])[0];
-  const isStablePattern = mostCommonPattern && mostCommonPattern[1] >= 3;
-
-  // Adjust break probability based on streak length and patterns
-  if (streak >= 6) {
-    breakProbability = Math.min(breakProbability + 0.15, 0.9); // Giảm ảnh hưởng
-    reason = `[Bẻ Cầu] Chuỗi ${streak} ${currentResult} dài, khả năng bẻ cầu cao`;
-  } else if (streak >= 4 && scoreDeviation > 3) {
-    breakProbability = Math.min(breakProbability + 0.1, 0.85); // Giảm ảnh hưởng
-    reason = `[Bẻ Cầu] Biến động điểm số lớn (${scoreDeviation.toFixed(1)}), khả năng bẻ cầu tăng`;
-  } else if (isStablePattern && last5.every(r => r === currentResult)) {
-    breakProbability = Math.min(breakProbability + 0.05, 0.8); // Giảm ảnh hưởng
-    reason = `[Bẻ Cầu] Phát hiện mẫu lặp ${mostCommonPattern[0]}, có khả năng bẻ cầu`;
-  } else {
-    breakProbability = Math.max(breakProbability - 0.15, 0.15); // Giảm xác suất bẻ cầu
-    reason = `[Bẻ Cầu] Không phát hiện mẫu bẻ cầu mạnh, tiếp tục theo cầu`;
-  }
-
-  // Decide prediction based on break probability
-  let prediction = breakProbability > 0.65 ? (currentResult === 'Tài' ? 2 : 1) : (currentResult === 'Tài' ? 1 : 2); // Tăng ngưỡng breakProb
-  return { prediction, breakProb: breakProbability, reason };
+class CoreAnalyzer {
+    constructor() {
+        this.patternDetector = new PatternDetector();
+        this.trendAnalyzer = new TrendAnalyzer();
+        this.volatilityCalculator = new VolatilityCalculator();
+    }
+    analyze(data) {
+        const patterns = this.patternDetector.detect(data);
+        const trends = this.trendAnalyzer.analyze(data);
+        const volatility = this.volatilityCalculator.calculate(data);
+        // Placeholder prediction logic
+        const lastValue = data[data.length - 1] || 11; // Default to 11
+        const prediction = lastValue > 10.5 ? 12 : 9; // Simple mean-reversion placeholder
+        
+        return {
+            patterns,
+            trends,
+            volatility,
+            prediction,
+            confidence: 0.6 // Placeholder confidence
+        };
+    }
 }
 
-// Helper function: Trend and probability model
-function trendAndProb(history) {
-  if (!history || history.length < 3) return 0;
-  const { streak, currentResult, breakProb } = detectStreakAndBreak(history);
-  if (streak >= 5) {
-    if (breakProb > 0.75) { // Tăng ngưỡng breakProb
-      return currentResult === 'Tài' ? 2 : 1; // 2: Xỉu, 1: Tài
+class StatisticalEngine {
+    calculateStatistics(data) {
+        if (!data || data.length === 0) return {};
+         const lastValue = data[data.length - 1] || 11;
+        // Placeholder prediction logic
+        const prediction = lastValue > 10.5 ? 12 : 9;
+        return {
+            mean: data.reduce((a, b) => a + b, 0) / data.length,
+            prediction,
+            confidence: 0.65 // Placeholder confidence
+        };
     }
-    return currentResult === 'Tài' ? 1 : 2;
-  }
-  const last15 = history.slice(-15).map(h => h.result);
-  if (!last15.length) return 0;
-  const weights = last15.map((_, i) => Math.pow(1.2, i)); // Giảm trọng số lịch sử gần
-  const taiWeighted = weights.reduce((sum, w, i) => sum + (last15[i] === 'Tài' ? w : 0), 0);
-  const xiuWeighted = weights.reduce((sum, w, i) => sum + (last15[i] === 'Xỉu' ? w : 0), 0);
-  const totalWeight = taiWeighted + xiuWeighted;
-  const last10 = last15.slice(-10);
-  const patterns = [];
-  if (last10.length >= 4) {
-    for (let i = 0; i <= last10.length - 4; i++) {
-      patterns.push(last10.slice(i, i + 4).join(','));
-    }
-  }
-  const patternCounts = patterns.reduce((acc, p) => { acc[p] = (acc[p] || 0) + 1; return acc; }, {});
-  const mostCommon = Object.entries(patternCounts).sort((a, b) => b[1] - a[1])[0];
-  if (mostCommon && mostCommon[1] >= 3) {
-    const pattern = mostCommon[0].split(',');
-    return pattern[pattern.length - 1] !== last10[last10.length - 1] ? 1 : 2;
-  } else if (totalWeight > 0 && Math.abs(taiWeighted - xiuWeighted) / totalWeight >= 0.25) { // Tăng ngưỡng
-    return taiWeighted > xiuWeighted ? 2 : 1; // Dự đoán ngược lại để cân bằng
-  }
-  return last15[last15.length - 1] === 'Xỉu' ? 1 : 2;
 }
 
-// Helper function: Short pattern model
-function shortPattern(history) {
-  if (!history || history.length < 3) return 0;
-  const { streak, currentResult, breakProb } = detectStreakAndBreak(history);
-  if (streak >= 4) {
-    if (breakProb > 0.75) { // Tăng ngưỡng
-      return currentResult === 'Tài' ? 2 : 1;
+class MLAdapter {
+    trainWithNewData(data, accuracy) { /* Placeholder */ }
+    predict(data) {
+         if (!data || data.length === 0) return { prediction: 11, confidence: 0.1 };
+         const lastValue = data[data.length - 1] || 11;
+         // Placeholder prediction logic
+        return {
+            prediction: lastValue, // Simple persistence model placeholder
+            confidence: 0.5 // Placeholder confidence
+        };
     }
-    return currentResult === 'Tài' ? 1 : 2;
-  }
-  const last8 = history.slice(-8).map(h => h.result);
-  if (!last8.length) return 0;
-  const patterns = [];
-  if (last8.length >= 3) {
-    for (let i = 0; i <= last8.length - 3; i++) {
-      patterns.push(last8.slice(i, i + 3).join(','));
-    }
-  }
-  const patternCounts = patterns.reduce((acc, p) => { acc[p] = (acc[p] || 0) + 1; return acc; }, {});
-  const mostCommon = Object.entries(patternCounts).sort((a, b) => b[1] - a[1])[0];
-  if (mostCommon && mostCommon[1] >= 2) {
-    const pattern = mostCommon[0].split(',');
-    return pattern[pattern.length - 1] !== last8[last8.length - 1] ? 1 : 2;
-  }
-  return last8[last8.length - 1] === 'Xỉu' ? 1 : 2;
 }
 
-// Helper function: Mean deviation model
-function meanDeviation(history) {
-  if (!history || history.length < 3) return 0;
-  const { streak, currentResult, breakProb } = detectStreakAndBreak(history);
-  if (streak >= 4) {
-    if (breakProb > 0.75) { // Tăng ngưỡng
-      return currentResult === 'Tài' ? 2 : 1;
+class StrategyManager {
+    constructor() {
+        // Only implementing one strategy for this placeholder version
+        this.strategy = new TrendFollowingStrategy();
     }
-    return currentResult === 'Tài' ? 1 : 2;
-  }
-  const last12 = history.slice(-12).map(h => h.result);
-  if (!last12.length) return 0;
-  const taiCount = last12.filter(r => r === 'Tài').length;
-  const xiuCount = last12.length - taiCount;
-  const deviation = Math.abs(taiCount - xiuCount) / last12.length;
-  if (deviation < 0.35) { // Tăng ngưỡng
-    return last12[last12.length - 1] === 'Xỉu' ? 1 : 2;
-  }
-  return xiuCount > taiCount ? 1 : 2;
+    selectOptimalStrategy(analysis) {
+        // Always select the default strategy in this simplified version
+        return this.strategy;
+    }
 }
 
-// Helper function: Recent switch model
-function recentSwitch(history) {
-  if (!history || history.length < 3) return 0;
-  const { streak, currentResult, breakProb } = detectStreakAndBreak(history);
-  if (streak >= 4) {
-    if (breakProb > 0.75) { // Tăng ngưỡng
-      return currentResult === 'Tài' ? 2 : 1;
+class TrendForecaster { /* Placeholder */ }
+
+class RiskManager {
+    adjustForRisk(analysis) {
+        // Pass-through in this simplified version
+        return analysis;
     }
-    return currentResult === 'Tài' ? 1 : 2;
-  }
-  const last10 = history.slice(-10).map(h => h.result);
-  if (!last10.length) return 0;
-  const switches = last10.slice(1).reduce((count, curr, idx) => count + (curr !== last10[idx] ? 1 : 0), 0);
-  return switches >= 6 ? (last10[last10.length - 1] === 'Xỉu' ? 1 : 2) : (last10[last10.length - 1] === 'Xỉu' ? 1 : 2); // Tăng ngưỡng switches
+    adjustThresholds(performanceFactor) { /* Placeholder */ }
 }
 
-// Helper function: Check bad pattern
-function isBadPattern(history) {
-  if (!history || history.length < 3) return false;
-  const last15 = history.slice(-15).map(h => h.result);
-  if (!last15.length) return false;
-  const switches = last15.slice(1).reduce((count, curr, idx) => count + (curr !== last15[idx] ? 1 : 0), 0);
-  const { streak } = detectStreakAndBreak(history);
-  return switches >= 9 || streak >= 10; // Tăng ngưỡng
+class EvaluationSystem { /* Placeholder */ }
+
+class RobustnessModule {
+    adjustSensitivity(adjustmentFactor) { /* Placeholder */ }
 }
 
-// AI HTDD Logic
-function aiHtddLogic(history) {
-  if (!history || history.length < 3) {
-    const randomResult = Math.random() < 0.5 ? 'Tài' : 'Xỉu';
-    return { prediction: randomResult, reason: '[AI] Không đủ lịch sử, dự đoán ngẫu nhiên', source: 'AI HTDD' };
-  }
-  const recentHistory = history.slice(-5).map(h => h.result);
-  const recentScores = history.slice(-5).map(h => h.totalScore || 0);
-  const taiCount = recentHistory.filter(r => r === 'Tài').length;
-  const xiuCount = recentHistory.filter(r => r === 'Xỉu').length;
+class OptimizationEngine { /* Placeholder */ }
 
-  if (history.length >= 3) {
-    const last3 = history.slice(-3).map(h => h.result);
-    if (last3.join(',') === 'Tài,Xỉu,Tài') {
-      return { prediction: 'Xỉu', reason: '[AI] Phát hiện mẫu 1T1X → tiếp theo nên đánh Xỉu', source: 'AI HTDD' };
-    } else if (last3.join(',') === 'Xỉu,Tài,Xỉu') {
-      return { prediction: 'Tài', reason: '[AI] Phát hiện mẫu 1X1T → tiếp theo nên đánh Tài', source: 'AI HTDD' };
+class MainAI {
+    constructor() {
+        this.core = new CoreAnalyzer();
+        this.statistical = new StatisticalEngine();
+        this.ml = new MLAdapter();
     }
-  }
-
-  if (history.length >= 4) {
-    const last4 = history.slice(-4).map(h => h.result);
-    if (last4.join(',') === 'Tài,Tài,Xỉu,Xỉu') {
-      return { prediction: 'Tài', reason: '[AI] Phát hiện mẫu 2T2X → tiếp theo nên đánh Tài', source: 'AI HTDD' };
-    } else if (last4.join(',') === 'Xỉu,Xỉu,Tài,Tài') {
-      return { prediction: 'Xỉu', reason: '[AI] Phát hiện mẫu 2X2T → tiếp theo nên đánh Xỉu', source: 'AI HTDD' };
+    comprehensiveAnalysis(data, history) {
+        const coreAnalysis = this.core.analyze(data);
+        const statisticalAnalysis = this.statistical.calculateStatistics(data);
+        const mlPrediction = this.ml.predict(data);
+        return {
+            consolidated: this.consolidateAnalyses(coreAnalysis, statisticalAnalysis, mlPrediction)
+        };
     }
-  }
-
-  if (history.length >= 9 && history.slice(-6).every(h => h.result === 'Tài')) {
-    return { prediction: 'Xỉu', reason: '[AI] Chuỗi Tài quá dài (6 lần) → dự đoán Xỉu', source: 'AI HTDD' }; // Giảm ngưỡng streak
-  } else if (history.length >= 9 && history.slice(-6).every(h => h.result === 'Xỉu')) {
-    return { prediction: 'Tài', reason: '[AI] Chuỗi Xỉu quá dài (6 lần) → dự đoán Tài', source: 'AI HTDD' }; // Giảm ngưỡng streak
-  }
-
-  const avgScore = recentScores.reduce((sum, score) => sum + score, 0) / (recentScores.length || 1);
-  if (avgScore > 10) {
-    return { prediction: 'Tài', reason: `[AI] Điểm trung bình cao (${avgScore.toFixed(1)}) → dự đoán Tài`, source: 'AI HTDD' };
-  } else if (avgScore < 8) {
-    return { prediction: 'Xỉu', reason: `[AI] Điểm trung bình thấp (${avgScore.toFixed(1)}) → dự đoán Xỉu`, source: 'AI HTDD' };
-  }
-
-  // Sửa lỗi logic và cân bằng
-  if (taiCount > xiuCount + 1) {
-    return { prediction: 'Xỉu', reason: `[AI] Tài chiếm đa số (${taiCount}/${recentHistory.length}) → dự đoán Xỉu`, source: 'AI HTDD' };
-  } else if (xiuCount > taiCount + 1) {
-    return { prediction: 'Tài', reason: `[AI] Xỉu chiếm đa số (${xiuCount}/${recentHistory.length}) → dự đoán Tài`, source: 'AI HTDD' };
-  } else {
-    const overallTai = history.filter(h => h.result === 'Tài').length;
-    const overallXiu = history.filter(h => h.result === 'Xỉu').length;
-    if (overallTai > overallXiu + 2) { // Thêm ngưỡng để cân bằng
-      return { prediction: 'Xỉu', reason: '[AI] Tổng thể Tài nhiều hơn → dự đoán Xỉu', source: 'AI HTDD' };
-    } else if (overallXiu > overallTai + 2) {
-      return { prediction: 'Tài', reason: '[AI] Tổng thể Xỉu nhiều hơn → dự đoán Tài', source: 'AI HTDD' };
-    } else {
-      return { prediction: Math.random() < 0.5 ? 'Tài' : 'Xỉu', reason: '[AI] Cân bằng, dự đoán ngẫu nhiên', source: 'AI HTDD' };
+    consolidateAnalyses(core, statistical, ml) {
+        // Weighted average of predictions (placeholders)
+        const prediction = (core.prediction * 0.4) + (statistical.prediction * 0.3) + (ml.prediction * 0.3);
+        const confidence = (core.confidence * 0.4) + (statistical.confidence * 0.3) + (ml.confidence * 0.3);
+        return { prediction, confidence, risk: {}, trends: {}, patterns: [] };
     }
-  }
+    getHistoricalPerformance() { return 0.7; } // Placeholder
 }
 
-// Main prediction function
-function generatePrediction(history, modelPredictionsRef) {
-  modelPredictions = modelPredictionsRef;
-  if (!history || history.length < 3) {
-      return {
-          prediction: "?",
-          confidence: 0,
-          reason: "Chưa đủ dữ liệu (cần 3 phiên)."
-      };
-  }
-
-  if (!modelPredictions['trend']) {
-    modelPredictions['trend'] = {};
-    modelPredictions['short'] = {};
-    modelPredictions['mean'] = {};
-    modelPredictions['switch'] = {};
-    modelPredictions['bridge'] = {};
-  }
-
-  const currentIndex = history[history.length - 1].session;
-
-  // Run models
-  const trendPred = history.length < 5 ? (history[history.length - 1].result === 'Tài' ? 2 : 1) : trendAndProb(history);
-  const shortPred = history.length < 5 ? (history[history.length - 1].result === 'Tài' ? 2 : 1) : shortPattern(history);
-  const meanPred = history.length < 5 ? (history[history.length - 1].result === 'Tài' ? 2 : 1) : meanDeviation(history);
-  const switchPred = history.length < 5 ? (history[history.length - 1].result === 'Tài' ? 2 : 1) : recentSwitch(history);
-  const bridgePred = history.length < 5 ? { prediction: (history[history.length - 1].result === 'Tài' ? 2 : 1), breakProb: 0.0, reason: 'Lịch sử ngắn, dự đoán ngược lại' } : smartBridgeBreak(history);
-  const aiPred = aiHtddLogic(history);
-
-  // Store predictions
-  modelPredictions['trend'][currentIndex] = trendPred;
-  modelPredictions['short'][currentIndex] = shortPred;
-  modelPredictions['mean'][currentIndex] = meanPred;
-  modelPredictions['switch'][currentIndex] = switchPred;
-  modelPredictions['bridge'][currentIndex] = bridgePred.prediction;
-
-  // Evaluate model performance
-  const modelScores = {
-    trend: evaluateModelPerformance(history, 'trend'),
-    short: evaluateModelPerformance(history, 'short'),
-    mean: evaluateModelPerformance(history, 'mean'),
-    switch: evaluateModelPerformance(history, 'switch'),
-    bridge: evaluateModelPerformance(history, 'bridge')
-  };
-
-  // Điều chỉnh trọng số
-  const weights = {
-    trend: 0.2 * modelScores.trend, // Giảm từ 0.25
-    short: 0.2 * modelScores.short,
-    mean: 0.25 * modelScores.mean, // Tăng từ 0.2
-    switch: 0.2 * modelScores.switch, // Tăng từ 0.15
-    bridge: 0.15 * modelScores.bridge, // Giảm từ 0.2
-    aihtdd: 0.2
-  };
-
-  let taiScore = 0;
-  let xiuScore = 0;
-
-  if (trendPred === 1) taiScore += weights.trend; else if (trendPred === 2) xiuScore += weights.trend;
-  if (shortPred === 1) taiScore += weights.short; else if (shortPred === 2) xiuScore += weights.short;
-  if (meanPred === 1) taiScore += weights.mean; else if (meanPred === 2) xiuScore += weights.mean;
-  if (switchPred === 1) taiScore += weights.switch; else if (switchPred === 2) xiuScore += weights.switch;
-  if (bridgePred.prediction === 1) taiScore += weights.bridge; else if (bridgePred.prediction === 2) xiuScore += weights.bridge;
-  if (aiPred.prediction === 'Tài') taiScore += weights.aihtdd; else xiuScore += weights.aihtdd;
-
-  // Điều chỉnh khi phát hiện mẫu xấu
-  if (isBadPattern(history)) {
-    taiScore *= 0.8; 
-    xiuScore *= 0.8;
-  }
-
-  // Cân bằng nếu dự đoán nghiêng quá nhiều
-  const last10Preds = history.slice(-10).map(h => h.result);
-  const taiPredCount = last10Preds.filter(r => r === 'Tài').length;
-  if (taiPredCount >= 7) {
-    xiuScore += 0.15;
-  } else if (taiPredCount <= 3) {
-    taiScore += 0.15;
-  }
-
-  // Điều chỉnh dựa trên xác suất bẻ cầu
-  if (bridgePred.breakProb > 0.65) {
-    if (bridgePred.prediction === 1) taiScore += 0.2; else xiuScore += 0.2;
-  }
-
-  const totalScore = taiScore + xiuScore;
-  const confidence = totalScore > 0 ? Math.max(taiScore, xiuScore) / totalScore : 0;
-  const finalPrediction = taiScore > xiuScore ? 'Tài' : 'Xỉu';
-
-  return {
-    prediction: finalPrediction,
-    confidence: confidence,
-    reason: `${aiPred.reason} | ${bridgePred.reason}`
-  };
+class MiniAI {
+    quickAnalyze(data) {
+        if (data.length < 2) return { prediction: 11, confidence: 0.1, risk: {}, trends: {}, patterns: [] };
+        const last = data[data.length - 1];
+        const prev = data[data.length - 2];
+        return {
+            prediction: last + (last - prev), // Simple linear extrapolation
+            confidence: 0.4, // Lower confidence for quick analysis
+            risk: {}, trends: {}, patterns: []
+        };
+    }
+    getHistoricalPerformance() { return 0.6; } // Placeholder
 }
+
+class AdvancedAI {
+    deepAnalysis(data, history) {
+        // Simplified deep analysis returning an average
+        const avg = data.reduce((a, b) => a + b, 0) / data.length;
+        return {
+            combined: {
+                prediction: avg,
+                confidence: 0.75, // Higher confidence for advanced analysis
+                risk: {}, trends: {}, patterns: []
+            }
+        };
+    }
+    getHistoricalPerformance() { return 0.8; } // Placeholder
+}
+
+// Helper classes with placeholder implementations
+class PatternDetector { detect(data) { return []; } }
+class TrendAnalyzer { analyze(data) { return {}; } }
+class VolatilityCalculator { calculate(data) { return 0; } }
+
+// Placeholder Strategy
+class TrendFollowingStrategy {
+    execute(analysis) {
+        // The core logic that returns a decision.
+        // 'buy' and 'sell' are generic terms we will map to "Tài" and "Xỉu".
+        // In this placeholder, it bases the decision on the predicted score.
+        return analysis.prediction > 10.5 ? 'buy' : 'sell';
+    }
+}
+
 
 // ###############################################################
 // ############## ADAPTER FOR THE SERVER LOGIC ###################
 // ###############################################################
 
-class Predictor {
+class MasterPredictor {
     constructor() {
-        // Trạng thái để theo dõi hiệu suất của các mô hình con
-        // được quản lý bởi biến `modelPredictions` ở scope ngoài
+        this.scoreHistory = [];
+        this.analysisSystem = new RobustCauAnalysisSystem();
+    }
+
+    /**
+     * Updates the predictor with the latest game result.
+     * @param {{score: number, result: string}} newEntry - The score and result of the last game.
+     */
+    async updateData({ score, result }) {
+        this.scoreHistory.push(score);
+        
+        // To prevent memory leaks, keep the history to a reasonable size.
+        if (this.scoreHistory.length > 500) {
+            this.scoreHistory.shift();
+        }
     }
 
     /**
      * Generates a new prediction based on the entire history.
-     * @param {Array} history - The full history of game results.
-     * @returns {{prediction: string, confidence: number}}
+     * @returns {Promise<{prediction: string, confidence: number}>}
      */
-    predict(history) {
+    async predict() {
+        // ### THAY ĐỔI 1: Chỉ cần 3 phiên để bắt đầu dự đoán ###
+        if (this.scoreHistory.length < 3) {
+            return { prediction: "?", confidence: 0 };
+        }
+
         try {
-            // Chạy thuật toán chính với toàn bộ lịch sử
-            const result = generatePrediction(history, modelPredictions);
-            return result;
+            // Run the full analysis using the history of dice totals.
+            const analysisResult = this.analysisSystem.analyze(this.scoreHistory);
+            
+            let finalPrediction = "?";
+            
+            // ### THAY ĐỔI 2: Đảo ngược logic dự đoán ###
+            // Nếu quyết định là 'buy' (thường là Tài), ta đổi thành Xỉu.
+            // Nếu quyết định là 'sell' (thường là Xỉu), ta đổi thành Tài.
+            if (analysisResult.decision === 'buy') {
+                finalPrediction = "Xỉu"; // Đảo ngược từ Tài -> Xỉu
+            } else if (analysisResult.decision === 'sell') {
+                finalPrediction = "Tài"; // Đảo ngược từ Xỉu -> Tài
+            }
+            
+            return {
+                prediction: finalPrediction,
+                confidence: analysisResult.confidence || 0
+            };
         } catch (error) {
             console.error("[❌] Error during prediction:", error);
-            // Trả về giá trị mặc định an toàn nếu có lỗi
-            return { prediction: "?", confidence: 0 };
+            return { prediction: "?", confidence: 0 }; // Return safe default on error
         }
     }
 }
-
 
 // ################################################################
 // ############## END: INTEGRATED ALGORITHM CODE ##################
@@ -424,8 +416,8 @@ let currentSessionId = null;
 let lastPrediction = null; 
 const fullHistory = []; 
 
-// Khởi tạo predictor mới với thuật toán của bạn
-const predictor = new Predictor();
+// Instantiate the new integrated predictor
+const predictor = new MasterPredictor();
 
 const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
 const WS_HEADERS = {
@@ -508,14 +500,16 @@ function connectWebSocket() {
                 fullHistory.push(historyEntry);
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
-                // Thuật toán mới không cần updateData, nó sẽ phân tích toàn bộ `fullHistory` mỗi lần.
-                // Gọi hàm dự đoán với toàn bộ lịch sử.
-                const predictionResult = predictor.predict(fullHistory);
+                // 1. Update the algorithm with the new result (total score and text result)
+                await predictor.updateData({ score: total, result: result });
+                
+                // 2. Get the next prediction from the algorithm
+                const predictionResult = await predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
 
-                // Cập nhật đối tượng response chính
+                // Update the main response object
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xuc_xac_1 = d1;
                 apiResponseData.xuc_xac_2 = d2;
@@ -527,7 +521,7 @@ function connectWebSocket() {
                 apiResponseData.pattern = fullHistory.map(h => h.result === 'Tài' ? 'T' : 'X').join('');
                 apiResponseData.tong_phien_da_phan_tich = fullHistory.length;
 
-                // Lưu lại dự đoán mới để kiểm tra ở phiên sau
+                // Set the new prediction for the next round's evaluation
                 lastPrediction = finalPrediction;
                 currentSessionId = null;
                 
