@@ -2,7 +2,21 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-const Predictor = require('./thuatoan.js'); // Import thuật toán mới
+
+// ##################################################################
+// ############## START: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ##########
+// ##################################################################
+
+// Import lớp thuật toán từ file thuatoan.js
+const SimplePredictor = require('./thuatoan.js');
+
+// Khởi tạo thuật toán
+const predictor = new SimplePredictor();
+
+// ################################################################
+// ############## END: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ############
+// ################################################################
+
 
 const app = express();
 app.use(cors());
@@ -30,10 +44,8 @@ let currentSessionId = null;
 let lastPrediction = null; 
 const fullHistory = []; 
 
-// Khởi tạo thuật toán dự đoán mới
-const predictor = new Predictor({ streakThreshold: 3 });
-
-const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNBkw0";
+// WebSocket constants
+const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Origin": "https://play.sun.win"
@@ -41,7 +53,6 @@ const WS_HEADERS = {
 const RECONNECT_DELAY = 2500;
 const PING_INTERVAL = 15000;
 
-// Dữ liệu initialMessages đã được cập nhật
 const initialMessages = [
     [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
     [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
@@ -60,7 +71,7 @@ function connectWebSocket() {
     ws = new WebSocket(WEBSOCKET_URL, { headers: WS_HEADERS });
 
     ws.on('open', () => {
-        console.log('[🙏🏻] WebSocket connected.');
+        console.log('[✅] WebSocket connected.');
         initialMessages.forEach((msg, i) => {
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -72,9 +83,9 @@ function connectWebSocket() {
         }, PING_INTERVAL);
     });
 
-    ws.on('pong', () => console.log('[😭] Ping OK.'));
+    ws.on('pong', () => console.log('[📶] Ping OK.'));
 
-    ws.on('message', async (message) => {
+    ws.on('message', (message) => { // Không cần async nữa
         try {
             const data = JSON.parse(message);
             if (!Array.isArray(data) || typeof data[1] !== 'object') return;
@@ -114,16 +125,16 @@ function connectWebSocket() {
                 fullHistory.push(historyEntry);
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
-                // 1. Cập nhật thuật toán với kết quả mới nhất
-                predictor.update(result);
+                // 1. Cập nhật thuật toán với kết quả mới
+                predictor.updateData({ result: result });
                 
-                // 2. Nhận dự đoán từ thuật toán
+                // 2. Lấy dự đoán tiếp theo từ thuật toán
                 const predictionResult = predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
 
-                // Cập nhật đối tượng phản hồi chính
+                // Cập nhật đối tượng response chính
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xuc_xac_1 = d1;
                 apiResponseData.xuc_xac_2 = d2;
@@ -135,7 +146,7 @@ function connectWebSocket() {
                 apiResponseData.pattern = fullHistory.map(h => h.result === 'Tài' ? 'T' : 'X').join('');
                 apiResponseData.tong_phien_da_phan_tich = fullHistory.length;
 
-                // Đặt dự đoán mới cho lần đánh giá tiếp theo
+                // Đặt dự đoán mới để đánh giá ở vòng sau
                 lastPrediction = finalPrediction;
                 currentSessionId = null;
                 
