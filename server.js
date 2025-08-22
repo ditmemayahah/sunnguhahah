@@ -2,62 +2,7 @@
 const WebSocket = require('ws');
 const express = require('express');
 const cors = require('cors');
-const ThuatToan = require('./thuatoan.js');
-
-// ##################################################################
-// ############## ADAPTER FOR THE SERVER LOGIC ###################
-// ##################################################################
-
-class MasterPredictor {
-    constructor() {
-        this.scoreHistory = [];
-        this.resultHistory = [];
-        this.thuatToan = new ThuatToan();
-    }
-
-    /**
-     * Updates the predictor with the latest game result.
-     * @param {{score: number, result: string}} newEntry - The score and result of the last game.
-     */
-    async updateData({ score, result }) {
-        this.scoreHistory.push(score);
-        this.resultHistory.push({ result, timestamp: Date.now() });
-        
-        // To prevent memory leaks, keep the history to a reasonable size.
-        if (this.scoreHistory.length > 500) {
-            this.scoreHistory.shift();
-            this.resultHistory.shift();
-        }
-    }
-
-    /**
-     * Generates a new prediction based on the entire history.
-     * @returns {Promise<{prediction: string, confidence: number}>}
-     */
-    async predict() {
-        if (this.resultHistory.length < 1) {
-            return { prediction: "?", confidence: 0 };
-        }
-
-        try {
-            // Sử dụng thuật toán từ thuatoan.js
-            const prediction = this.thuatToan.predict(this.resultHistory);
-            const confidence = this.thuatToan.calculateConfidence();
-            
-            return {
-                prediction: prediction,
-                confidence: confidence
-            };
-        } catch (error) {
-            console.error("[❌] Error during prediction:", error);
-            return { prediction: "?", confidence: 0 };
-        }
-    }
-}
-
-// ###############################################################
-// ############## END: INTEGRATED ALGORITHM CODE ##################
-// ################################################################
+const Predictor = require('./thuatoan.js'); // Import thuật toán mới
 
 const app = express();
 app.use(cors());
@@ -85,10 +30,10 @@ let currentSessionId = null;
 let lastPrediction = null; 
 const fullHistory = []; 
 
-// Instantiate the new integrated predictor
-const predictor = new MasterPredictor();
+// Khởi tạo thuật toán dự đoán mới
+const predictor = new Predictor({ streakThreshold: 3 });
 
-const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
+const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNBkw0";
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Origin": "https://play.sun.win"
@@ -98,7 +43,7 @@ const PING_INTERVAL = 15000;
 
 // Dữ liệu initialMessages đã được cập nhật
 const initialMessages = [
-    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbxzZSwidmVyaWZpZWRCYW5rQWNjb3VudCI6ZmFsc2UsInBsYXlFdmVudExvYmJ5IjpmYWxzZSwiY3VzdG9tZXJJZCI6MzEzMzUxNzUxLCJhZmZJZCI6IkdFTVdJTlwiLCJiYW5uZWQiOmZhbHNlLCJicmFuZCI6ImdlbSIsInRpbWVzdGFtcCI6MTc1NTY4MTY0OTQ3MywibG9ja0dhbWVzIjpbXSwiYW1vdW50IjowLCJsb2NrQ2hhdCI6ZmFsc2UsInBob25lVmVyaWZpZWQiOmZhbHNlLCJpcEFkZHJlc3MiOiIyNDA1OjQ4MDI6MThjZTphNzgwOjhjMzA6NjY2Yzo1YmZkOjM2YjEiLCJtdXRlIjpmYWxzZSwiYXZhdGFyIjoiaHR0cHM6Ly9pbWFnZXMuc3dpbnNob3AubmV0L2ltYWdlcy9hdmF0YXIvYXZhdGFyXzAxLnBuZyIsInBsYXRmb3JtSWQiOjQsInVzZXJJZCI6IjU5ZjNkMDVjLWM0ZmMtNDE5MS04MjU5LTg4ZTY4ZTJhOGYwZiIsInJlZ1RpbWUiOjE3NTU2NzQ3MDM4MDgsInBob25lIjoiIiwiZGVwb3NpdCI6ZmFsc2UsInVzZXJuYW1lIjoiR01fZGNtc2hpZmZzZGYifQ.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
+    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
     [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
     [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
 ];
@@ -115,7 +60,7 @@ function connectWebSocket() {
     ws = new WebSocket(WEBSOCKET_URL, { headers: WS_HEADERS });
 
     ws.on('open', () => {
-        console.log('[✅] WebSocket connected.');
+        console.log('[🙏🏻] WebSocket connected.');
         initialMessages.forEach((msg, i) => {
             setTimeout(() => {
                 if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -127,7 +72,7 @@ function connectWebSocket() {
         }, PING_INTERVAL);
     });
 
-    ws.on('pong', () => console.log('[📶] Ping OK.'));
+    ws.on('pong', () => console.log('[😭] Ping OK.'));
 
     ws.on('message', async (message) => {
         try {
@@ -169,16 +114,16 @@ function connectWebSocket() {
                 fullHistory.push(historyEntry);
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
-                // 1. Update the algorithm with the new result (total score and text result)
-                await predictor.updateData({ score: total, result: result });
+                // 1. Cập nhật thuật toán với kết quả mới nhất
+                predictor.update(result);
                 
-                // 2. Get the next prediction from the algorithm
-                const predictionResult = await predictor.predict();
+                // 2. Nhận dự đoán từ thuật toán
+                const predictionResult = predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
 
-                // Update the main response object
+                // Cập nhật đối tượng phản hồi chính
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xuc_xac_1 = d1;
                 apiResponseData.xuc_xac_2 = d2;
@@ -190,7 +135,7 @@ function connectWebSocket() {
                 apiResponseData.pattern = fullHistory.map(h => h.result === 'Tài' ? 'T' : 'X').join('');
                 apiResponseData.tong_phien_da_phan_tich = fullHistory.length;
 
-                // Set the new prediction for the next round's evaluation
+                // Đặt dự đoán mới cho lần đánh giá tiếp theo
                 lastPrediction = finalPrediction;
                 currentSessionId = null;
                 
