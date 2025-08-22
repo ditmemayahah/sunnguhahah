@@ -1,51 +1,53 @@
 // thuatoan.js
-class Predictor {
-    constructor(config = {}) {
-        // Cấu hình thuật toán
-        this.config = {
-            streakThreshold: 3, // Ngưỡng bắt đầu theo cầu bệt
-            ...config
-        };
-        // Trạng thái hiện tại của thuật toán
-        this.currentStreak = 0;
-        this.currentStreakResult = null;
+
+class SimplePredictor {
+    constructor() {
+        // Chỉ cần lưu lịch sử kết quả (Tài hoặc Xỉu)
+        this.history = [];
     }
 
     /**
-     * Cập nhật thuật toán với kết quả mới nhất.
-     * @param {string} newResult - Kết quả mới của phiên (e.g., "Tài" or "Xỉu").
+     * Cập nhật kết quả phiên mới nhất.
+     * @param {{ result: string }} newEntry - Chỉ cần kết quả "Tài" hoặc "Xỉu".
      */
-    update(newResult) {
-        if (newResult === this.currentStreakResult) {
-            this.currentStreak++;
-        } else {
-            this.currentStreak = 1;
-            this.currentStreakResult = newResult;
+    updateData({ result }) {
+        this.history.push(result);
+
+        // Giới hạn lịch sử để tránh tốn bộ nhớ
+        if (this.history.length > 500) {
+            this.history.shift();
         }
     }
 
     /**
-     * Tạo một dự đoán mới dựa trên thuật toán.
+     * Tạo dự đoán cho phiên tiếp theo.
      * @returns {{prediction: string, confidence: number}}
      */
     predict() {
-        // Nếu đã đủ ngưỡng để "bắt cầu bệt"
-        if (this.currentStreak >= this.config.streakThreshold) {
-            // Dự đoán theo cầu bệt với độ tin cậy cao
-            return {
-                prediction: this.currentStreakResult,
-                confidence: 0.85
-            };
+        const historyLength = this.history.length;
+
+        // Nếu chưa có lịch sử, không thể dự đoán
+        if (historyLength < 1) {
+            return { prediction: "?", confidence: 0 };
         }
 
-        // Nếu không có cầu bệt, dự đoán ngẫu nhiên
+        // === LOGIC CỐT LÕI: BẮT CẦU BỆT ===
+        // "Bệt cho đến chết": Nếu 2 phiên gần nhất giống nhau, theo cầu đó.
+        if (historyLength >= 2) {
+            const lastResult = this.history[historyLength - 1];
+            const secondLastResult = this.history[historyLength - 2];
+
+            if (lastResult === secondLastResult) {
+                // Đang có bệt, dự đoán theo bệt
+                return { prediction: lastResult, confidence: 0.75 }; // Độ tin cậy cao hơn khi có cầu
+            }
+        }
+
+        // === LOGIC DỰ PHÒNG: NGẪU NHIÊN ===
+        // Nếu không có cầu bệt (hoặc chỉ có 1 phiên lịch sử), dự đoán ngẫu nhiên.
         const randomPrediction = Math.random() < 0.5 ? "Tài" : "Xỉu";
-        return {
-            prediction: randomPrediction,
-            confidence: 0.5 // Độ tin cậy thấp khi ngẫu nhiên
-        };
+        return { prediction: randomPrediction, confidence: 0.50 }; // Độ tin cậy trung bình
     }
 }
 
-// Export class để có thể sử dụng ở các file khác
-module.exports = Predictor;
+module.exports = SimplePredictor;
