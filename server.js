@@ -7,11 +7,11 @@ const cors = require('cors');
 // ############## START: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ##########
 // ##################################################################
 
-// Import lớp thuật toán từ file thuatoan.js
-const SimplePredictor = require('./thuatoan.js');
+// SỬA LỖI 1: Gọi đúng tên class được export từ thuatoan.js
+const { MasterPredictor } = require('./thuatoan.js');
 
 // Khởi tạo thuật toán
-const predictor = new SimplePredictor();
+const predictor = new MasterPredictor();
 
 // ################################################################
 // ############## END: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ############
@@ -85,7 +85,8 @@ function connectWebSocket() {
 
     ws.on('pong', () => console.log('[📶] Ping OK.'));
 
-    ws.on('message', (message) => { // Không cần async nữa
+    // SỬA LỖI 3: Thêm 'async' vào hàm xử lý message
+    ws.on('message', async (message) => { 
         try {
             const data = JSON.parse(message);
             if (!Array.isArray(data) || typeof data[1] !== 'object') return;
@@ -125,16 +126,16 @@ function connectWebSocket() {
                 fullHistory.push(historyEntry);
                 if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
                 
-                // 1. Cập nhật thuật toán với kết quả mới
-                predictor.updateData({ result: result });
+                // SỬA LỖI 2: Cập nhật thuật toán với đủ dữ liệu (result và score)
+                // SỬA LỖI 3: Dùng 'await' vì updateData là hàm async
+                await predictor.updateData({ result: result, score: total });
                 
-                // 2. Lấy dự đoán tiếp theo từ thuật toán
-                const predictionResult = predictor.predict();
+                // SỬA LỖI 3: Dùng 'await' vì predict là hàm async
+                const predictionResult = await predictor.predict();
                 
                 let finalPrediction = predictionResult.prediction;
                 let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
 
-                // Cập nhật đối tượng response chính
                 apiResponseData.phien = currentSessionId;
                 apiResponseData.xuc_xac_1 = d1;
                 apiResponseData.xuc_xac_2 = d2;
@@ -146,7 +147,6 @@ function connectWebSocket() {
                 apiResponseData.pattern = fullHistory.map(h => h.result === 'Tài' ? 'T' : 'X').join('');
                 apiResponseData.tong_phien_da_phan_tich = fullHistory.length;
 
-                // Đặt dự đoán mới để đánh giá ở vòng sau
                 lastPrediction = finalPrediction;
                 currentSessionId = null;
                 
