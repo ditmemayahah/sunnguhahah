@@ -1,55 +1,83 @@
 // thuatoan.js
-
-class SimplePredictor {
-    constructor() {
-        // Chỉ cần lưu lịch sử kết quả (Tài hoặc Xỉu)
+class MasterPredictor {
+    constructor(maxHistorySize = 1000) {
         this.history = [];
+        this.maxHistorySize = maxHistorySize;
     }
 
-    /**
-     * Cập nhật kết quả phiên mới nhất.
-     * @param {{ result: string }} newEntry - Chỉ cần kết quả "Tài" hoặc "Xỉu".
-     */
-    updateData({ result }) {
-        this.history.push(result);
-
-        // Giới hạn lịch sử để tránh tốn bộ nhớ
-        if (this.history.length > 500) {
-            this.history.shift();
-        }
+    async updateData(gameData) {
+        // gameData bây giờ là: { score, result }
+        this.history.push(gameData);
+        if (this.history.length > this.maxHistorySize) this.history.shift();
     }
 
-    /**
-     * Tạo dự đoán cho phiên tiếp theo.
-     * @returns {{prediction: string, confidence: number}}
-     */
-    predict() {
-        const historyLength = this.history.length;
-
-        // Nếu chưa có lịch sử, không thể dự đoán
-        if (historyLength < 1) {
-            return { prediction: "?", confidence: 0 };
+    async predict() {
+        if (this.history.length < 10) {
+            return {
+                prediction: "?",
+                confidence: 0.5,
+                reason: "Chưa đủ dữ liệu để dự đoán"
+            };
         }
 
-        // === LOGIC 1: BẮT CẦU BỆT (KHÔNG ĐỔI) ===
-        // "Bệt cho đến chết": Nếu 2 phiên gần nhất giống nhau, theo cầu đó.
-        if (historyLength >= 2) {
-            const lastResult = this.history[historyLength - 1];
-            const secondLastResult = this.history[historyLength - 2];
+        // ================== PHÂN TÍCH ==================
+        const seq = this.history.map(h => h.result);
+        const totals = this.history.map(h => h.score); // Bây giờ h.score đã tồn tại
+        const last = seq[seq.length - 1];
+        const lastScore = totals[totals.length - 1];
 
-            if (lastResult === secondLastResult) {
-                // Đang có bệt, dự đoán theo bệt
-                return { prediction: lastResult, confidence: 0.75 }; // Độ tin cậy cao khi theo cầu
-            }
+        // 1) Tính streak (chuỗi liên tiếp)
+        let streakLen = 1;
+        for (let i = seq.length - 2; i >= 0; i--) {
+            if (seq[i] === last) streakLen++;
+            else break;
         }
 
-        // === LOGIC 2: BẺ CẦU (ĐẢO NGƯỢC) ===
-        // Nếu không có cầu bệt, dự đoán ngược lại kết quả gần nhất.
-        const lastResult = this.history[historyLength - 1];
-        const reversedPrediction = lastResult === 'Tài' ? 'Xỉu' : 'Tài';
-        
-        return { prediction: reversedPrediction, confidence: 0.60 }; // Độ tin cậy trung bình khi bẻ cầu
+        // 2) Tính bias gần đây (20 phiên gần nhất)
+        const recent = seq.slice(-20);
+        const countTai = recent.filter(r => r === "Tài").length;
+        const ratioTai = countTai / recent.length;
+
+        // 3) Tín hiệu band (tổng điểm cực trị)
+        let bandSignal = null;
+        if (lastScore >= 14) bandSignal = "Xỉu";
+        if (lastScore <= 7)  bandSignal = "Tài";
+
+        // ================== RA QUYẾT ĐỊNH ==================
+        let prediction = "Tài";
+        let confidence = 0.55;
+        let reason = "Không có cầu mạnh, nghiêng Tài nhẹ";
+
+        // SỬA LỖI 4: Dùng backtick (`) cho template literals
+        if (streakLen >= 3) {
+            prediction = (last === "Tài") ? "Xỉu" : "Tài";
+            confidence = 0.65;
+            reason = `Chuỗi ${streakLen} ${last} → dự đoán gãy`;
+        } else if (ratioTai > 0.65) {
+            prediction = "Xỉu";
+            confidence = 0.6;
+            reason = "Tỉ lệ Tài 20 phiên gần đây quá cao → hồi mean về Xỉu";
+        } else if (ratioTai < 0.35) {
+            prediction = "Tài";
+            confidence = 0.6;
+            reason = "Tỉ lệ Xỉu 20 phiên gần đây quá cao → hồi mean về Tài";
+        } else if (bandSignal) {
+            prediction = bandSignal;
+            confidence = 0.58;
+            reason = `Tổng điểm ${lastScore} nằm vùng cực trị → dễ hồi về ${bandSignal}`;
+        } else if (lastScore >= 9 && lastScore <= 12) {
+            prediction = last === "Tài" ? "Xỉu" : "Tài";
+            confidence = 0.57;
+            reason = "Tổng điểm gần mốc 10–12 → dễ đảo chiều";
+        } else {
+            prediction = last; // giữ xu hướng
+            confidence = 0.55;
+            reason = "Không có cầu mạnh → giữ xu hướng gần nhất";
+        }
+
+        return { prediction, confidence, reason };
     }
 }
 
-module.exports = SimplePredictor;
+// Sửa lại cách export để khớp với cách import trong server.js
+module.exports = { MasterPredictor };
