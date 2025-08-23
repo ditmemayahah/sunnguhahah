@@ -16,30 +16,31 @@ class MasterPredictor {
     // Dự đoán kết quả tiếp theo
     async predict() {
         let prediction = "?";
-        let confidence = 0.5; // Mức độ tin cậy mặc định 50%
+        let confidence = 0.5; // Mức độ tin cậy mặc định
 
-        if (this.history.length >= 2) {
-            const last = this.history[this.history.length - 1];
-            const secondLast = this.history[this.history.length - 2];
+        const historyLength = this.history.length;
+        if (historyLength > 0) {
+            const lastResult = this.history[historyLength - 1];
+            
+            // 1. Kiểm tra cầu bệt (3 phiên liên tiếp trở lên)
+            // Lấy 3 phiên cuối cùng
+            const lastThreeResults = this.history.slice(-3);
+            const isStreak = lastThreeResults.length >= 3 && lastThreeResults.every(r => r === lastResult);
 
-            // Dự đoán theo cầu bệt (3 lần liên tiếp trở lên)
-            if (this.history.length >= 3 && this.history.slice(-3).every(r => r === last)) {
-                prediction = last;
-                confidence = 0.8; // Tăng độ tin cậy
-            } 
-            // Dự đoán theo cầu 1-1
-            else if (last !== secondLast) {
-                prediction = secondLast;
-                confidence = 0.7; // Tăng độ tin cậy
-            } 
-            // Dự đoán theo kết quả vừa rồi
-            else {
-                prediction = last;
-                confidence = 0.6; 
+            if (isStreak) {
+                // Nếu đang bệt, dự đoán tiếp tục bệt và tăng độ tin cậy
+                prediction = lastResult;
+                confidence = 0.8;
+            } else {
+                // 2. Không phải bệt, dự đoán ngẫu nhiên và đảo ngược
+                const randomChoice = Math.random() < 0.5 ? 'Tài' : 'Xỉu';
+                prediction = (randomChoice === 'Tài') ? 'Xỉu' : 'Tài';
+                confidence = 0.6; // Độ tin cậy cao hơn 50% một chút
             }
-        } else if (this.history.length > 0) {
-            prediction = this.history[this.history.length - 1] === 'Tài' ? 'Xỉu' : 'Tài';
-            confidence = 0.55;
+        } else {
+            // Trường hợp chưa có lịch sử, dự đoán ngẫu nhiên
+            prediction = Math.random() < 0.5 ? 'Tài' : 'Xỉu';
+            confidence = 0.5;
         }
 
         return {
