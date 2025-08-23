@@ -6,45 +6,27 @@ const cors = require('cors');
 // ##################################################################
 // ############## START: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ##########
 // ##################################################################
-
-// SỬA LỖI 1: Gọi đúng tên class được export từ thuatoan.js
 const { MasterPredictor } = require('./thuatoan.js');
-
-// Khởi tạo thuật toán
 const predictor = new MasterPredictor();
-
 // ################################################################
 // ############## END: GỌI THUẬT TOÁN TỪ FILE BÊN NGOÀI ############
 // ################################################################
-
 
 const app = express();
 app.use(cors());
 const PORT = process.env.PORT || 5000;
 
 let apiResponseData = {
-    id: "@gvt",
     phien: null,
-    xuc_xac_1: null,
-    xuc_xac_2: null,
-    xuc_xac_3: null,
-    tong: null,
     ket_qua: "",
     du_doan: "?",
     do_tin_cay: "0%",
-    tong_dung: 0,
-    tong_sai: 0,
     ty_le_thang_lich_su: "0%",
-    pattern: "",
-    tong_phien_da_phan_tich: 0
 };
 
-const MAX_HISTORY_SIZE = 1000;
-let currentSessionId = null;
 let lastPrediction = null; 
 const fullHistory = []; 
 
-// WebSocket constants
 const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -54,7 +36,7 @@ const RECONNECT_DELAY = 2500;
 const PING_INTERVAL = 15000;
 
 const initialMessages = [
-    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffsdf\",\"timestamp\":1755681649473,\"refreshToken\":\"5448e4e7f31241a6bda367b3ac520167.dce5a5690af745c9b01a73d531a1901b\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
+    [1,"MiniGame","GM_dcmshiffsdf","12123p",{"info":"{\"ipAddress\":\"2405:4802:18ce:a780:8c30:666c:5bfd:36b1\",\"wsToken\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJnZW5kZXIiOjAsImNhblZpZXdTdGF0IjpmYWxzZSwiZGlzcGxheU5hbWUiOiJkY3VtYXJlZmUiLCJib3QiOjAsImlzTWVyY2hhbnQiOmZhbHNlLCJ2ZXJpZmllZEJhbmtBY2NvdW50IjpmYWxzZSwicGxheUV2ZW50TG9iYnkiOmZhbHNlLCJjdXN0b21lcklkIjozMTMzNTE3NTEsImFmZklkIjoiR0VNV0lOIiwiYmFubmVkIjpmYWxzZSwiYnJhbmQiOiJnZW0iLCJ0aW1lc3RhbXAiOjE3NTU2ODE2NDk0NzMsImxvY2tHYW1lcyI6W10sImFtb3VudCI6MCwibG9ja0NoYXQiOmZhbHNlLCJwaG9uZVZlcmlmaWVkIjpmYWxzZSwiaXBBZGRyZXNzIjoiMjQwNTo0ODAyOjE4Y2U6YTc4MDo4YzMwOjY2NmM6NWJmZDozNmIxIiwibXV0ZSI6ZmFsc2UsImF2YXRhciI6Imh0dHBzOi8vaW1hZ2VzLnN3aW5zaG9wLm5ldC9pbWFnZXMvYXZhdGFyL2F2YXRhcl8wMS5wbmciLCJwbGF0Zm9ybUlkIjo0LCJ1c2VySWQiOiI1OWYzZDA1Yy1jNGZjLTQxOTEtODI1OS04OGU2OGUyYThmMGYiLCJyZWdUaW1lIjoxNzU1Njc0NzAzODA4LCJwaG9uZSI6IiIsImRlcG9zaXQiOmZhbHNlLCJ1c2VybmFtZSI6IkdNX2RjbXNoaWZmc2RmIn0.vDdq-SLgdXjRwijNY5PEMUEETEP4dQRklZnWcTtJML8\",\"locale\":\"vi\",\"userId\":\"59f3d05c-c4fc-4191-8259-88e68e2a8f0f\",\"username\":\"GM_dcmshiffdsf\"}","signature":"05F08CF241C76DA35BB0C4F951181A807E2423EDB9FF99F9A24ABF6929E668889BB84BC1EE0DFE61F0114CE262D61DEBFFFA8E9DF09CA1E1985B326CAE963138027D37B13D7671545DCDD357079FFC7B18E2E33FC85D68E43571BC8D2CC28BC502D0D8FEE4544D680817F607309C415A6C496C287E44C98E91D04577DCA9CCFB"}],
     [6, "MiniGame", "taixiuPlugin", { cmd: 1005 }],
     [6, "MiniGame", "lobbyPlugin", { cmd: 10001 }]
 ];
@@ -85,7 +67,6 @@ function connectWebSocket() {
 
     ws.on('pong', () => console.log('[📶] Ping OK.'));
 
-    // SỬA LỖI 3: Thêm 'async' vào hàm xử lý message
     ws.on('message', async (message) => { 
         try {
             const data = JSON.parse(message);
@@ -94,7 +75,7 @@ function connectWebSocket() {
             const { cmd, sid, d1, d2, d3, gBB } = data[1];
 
             if (cmd === 1008 && sid) {
-                currentSessionId = sid;
+                apiResponseData.phien = sid;
             }
 
             if (cmd === 1003 && gBB) {
@@ -103,54 +84,45 @@ function connectWebSocket() {
                 const total = d1 + d2 + d3;
                 const result = (total > 10) ? "Tài" : "Xỉu";
                 
+                // Cập nhật tỷ lệ thắng lịch sử
                 let correctnessStatus = null;
                 if (lastPrediction && lastPrediction !== "?") {
                     if (lastPrediction === result) {
-                        apiResponseData.tong_dung++;
+                        predictor.correctPredictions++;
                         correctnessStatus = "ĐÚNG";
-                    } else {
-                        apiResponseData.tong_sai++;
-                        correctnessStatus = "SAI";
                     }
+                    predictor.totalPredictions++;
                 }
 
-                const totalGames = apiResponseData.tong_dung + apiResponseData.tong_sai;
-                apiResponseData.ty_le_thang_lich_su = totalGames === 0 ? "0%" : `${((apiResponseData.tong_dung / totalGames) * 100).toFixed(0)}%`;
-
-                const historyEntry = { 
-                    session: currentSessionId, d1, d2, d3, 
-                    totalScore: total, result, 
-                    prediction: lastPrediction,
-                    correctness: correctnessStatus 
-                };
-                fullHistory.push(historyEntry);
-                if (fullHistory.length > MAX_HISTORY_SIZE) fullHistory.shift();
+                const winRate = predictor.totalPredictions === 0 ? "0%" : `${((predictor.correctPredictions / predictor.totalPredictions) * 100).toFixed(0)}%`;
+                apiResponseData.ty_le_thang_lich_su = winRate;
                 
-                // SỬA LỖI 2: Cập nhật thuật toán với đủ dữ liệu (result và score)
-                // SỬA LỖI 3: Dùng 'await' vì updateData là hàm async
+                // Cập nhật thuật toán với dữ liệu mới
                 await predictor.updateData({ result: result, score: total });
                 
-                // SỬA LỖI 3: Dùng 'await' vì predict là hàm async
+                // Lấy dự đoán mới
                 const predictionResult = await predictor.predict();
                 
-                let finalPrediction = predictionResult.prediction;
-                let predictionConfidence = `${(predictionResult.confidence * 100).toFixed(0)}%`;
-
-                apiResponseData.phien = currentSessionId;
-                apiResponseData.xuc_xac_1 = d1;
-                apiResponseData.xuc_xac_2 = d2;
-                apiResponseData.xuc_xac_3 = d3;
-                apiResponseData.tong = total;
                 apiResponseData.ket_qua = result;
-                apiResponseData.du_doan = finalPrediction;
-                apiResponseData.do_tin_cay = predictionConfidence;
-                apiResponseData.pattern = fullHistory.map(h => h.result === 'Tài' ? 'T' : 'X').join('');
-                apiResponseData.tong_phien_da_phan_tich = fullHistory.length;
-
-                lastPrediction = finalPrediction;
-                currentSessionId = null;
+                apiResponseData.du_doan = predictionResult.prediction;
+                apiResponseData.do_tin_cay = `${(predictionResult.confidence * 100).toFixed(0)}%`;
                 
-                console.log(`Phiên #${apiResponseData.phien}: ${apiResponseData.tong} (${result}) | Dự đoán mới: ${finalPrediction} | Tin cậy: ${apiResponseData.do_tin_cay} | Tỷ lệ thắng: ${apiResponseData.ty_le_thang_lich_su}`);
+                lastPrediction = apiResponseData.du_doan;
+                
+                console.log(`Phiên #${apiResponseData.phien}: ${total} (${result}) | Dự đoán mới: ${apiResponseData.du_doan} | Tin cậy: ${apiResponseData.do_tin_cay} | Tỷ lệ thắng: ${apiResponseData.ty_le_thang_lich_su}`);
+
+                // Thêm vào lịch sử đầy đủ
+                fullHistory.push({
+                    phien: apiResponseData.phien,
+                    xuc_xac_1: d1,
+                    xuc_xac_2: d2,
+                    xuc_xac_3: d3,
+                    tong: total,
+                    ket_qua: result,
+                    du_doan: apiResponseData.du_doan,
+                    do_tin_cay: apiResponseData.do_tin_cay,
+                    trang_thai: correctnessStatus
+                });
             }
         } catch (e) {
             console.error('[❌] Lỗi xử lý message:', e.message);
@@ -190,23 +162,23 @@ app.get('/history', (req, res) => {
         html += '<p>Chưa có dữ liệu lịch sử.</p>';
     } else {
         [...fullHistory].reverse().forEach(h => {
-            const resultClass = h.result === 'Tài' ? 'tai' : 'xiu';
+            const resultClass = h.ket_qua === 'Tài' ? 'tai' : 'xiu';
             let statusHtml = '';
-            if (h.correctness === "ĐÚNG") {
+            if (h.trang_thai === "ĐÚNG") {
                 statusHtml = ` <span class="dung">✅ ĐÚNG</span>`;
-            } else if (h.correctness === "SAI") {
+            } else if (h.trang_thai === "SAI") {
                 statusHtml = ` <span class="sai">❌ SAI</span>`;
             }
 
-            const predictionHtml = h.prediction && h.prediction !== "?"
-                ? `- Dự đoán: <b>${h.prediction}</b>${statusHtml}<br/>`
+            const predictionHtml = h.du_doan && h.du_doan !== "?"
+                ? `- Dự đoán: <b>${h.du_doan}</b>${statusHtml}<br/>`
                 : '';
 
             html += `<div class="entry">
-                        - Phiên: <b>${h.session}</b><br/>
+                        - Phiên: <b>${h.phien}</b><br/>
                         ${predictionHtml}
-                        - Kết quả: <span class="${resultClass}">${h.result}</span><br/>
-                        - Xúc xắc: [${h.d1}]-[${h.d2}]-[${h.d3}] (Tổng: ${h.totalScore})
+                        - Kết quả: <span class="${resultClass}">${h.ket_qua}</span><br/>
+                        - Xúc xắc: [${h.xuc_xac_1}]-[${h.xuc_xac_2}]-[${h.xuc_xac_3}] (Tổng: ${h.tong})
                      </div>`;
         });
     }
@@ -214,7 +186,7 @@ app.get('/history', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-    res.send(`<h2>🎯 API Phân Tích Sunwin Tài Xỉu</h2><p>Xem kết quả JSON: <a href="/sunlon">/sunlon</a></p><p>Xem lịch sử 1000 phiên gần nhất: <a href="/history">/history</a></p>`);
+    res.send(`<h2>🎯 API Phân Tích Sunwin Tài Xỉu</h2><p>Xem kết quả JSON: <a href="/sunlon">/sunlon</a></p><p>Xem lịch sử các phiên: <a href="/history">/history</a></p>`);
 });
 
 app.listen(PORT, () => {
