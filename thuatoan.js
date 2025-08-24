@@ -9,15 +9,15 @@ class HistoryModel {
     this.maxHistory = 1000;
   }
 
-  addResult(result) {
-    this.history.push(result);
+  addResult(data) {
+    this.history.push(data);
     if (this.history.length > this.maxHistory) {
       this.history.shift();
     }
   }
 
   getLastResults(count = 12) {
-    return this.history.slice(-count);
+    return this.history.slice(-count).map(item => item.result === 'Tài' ? 'T' : 'X');
   }
 
   getTrend(length = 5) {
@@ -67,25 +67,22 @@ class WeightManager {
   }
 
   adjustWeights(performanceData) {
-    // Cập nhật hiệu suất
     Object.keys(performanceData).forEach(model => {
       this.performance[model] = performanceData[model];
     });
 
-    // Điều chỉnh trọng số dựa trên hiệu suất
     Object.keys(this.weights).forEach(model => {
       if (this.performance[model] !== undefined) {
-        // Tăng trọng số cho model có hiệu suất cao
         this.weights[model] = 0.5 + (this.performance[model] * 0.5);
       }
     });
 
-    // Chuẩn hóa trọng số
     this.normalizeWeights();
   }
 
   normalizeWeights() {
     const total = Object.values(this.weights).reduce((sum, weight) => sum + weight, 0);
+    if (total === 0) return;
     Object.keys(this.weights).forEach(model => {
       this.weights[model] = this.weights[model] / total;
     });
@@ -104,7 +101,6 @@ class BasicPatternModel {
     const results = this.historyModel.getLastResults(10);
     if (results.length < 5) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Phát hiện cầu 1-1 (T-X-T-X...)
     let isOneOne = true;
     for (let i = 0; i < results.length - 1; i++) {
       if (results[i] === results[i + 1]) {
@@ -123,7 +119,6 @@ class BasicPatternModel {
       };
     }
 
-    // Phát hiện cầu 1-2-1 (T-X-X-T...)
     if (results.length >= 4) {
       const pattern = results.slice(-4).join('');
       if (pattern === 'TXXT' || pattern === 'XTTX') {
@@ -135,8 +130,6 @@ class BasicPatternModel {
         };
       }
     }
-
-    // Thêm các mẫu cầu khác ở đây...
 
     return { prediction: null, confidence: 0, reason: "Không phát hiện cầu cơ bản" };
   }
@@ -161,7 +154,6 @@ class TrendAnalysisModel {
       };
     }
     
-    // Ưu tiên xu hướng ngắn hạn nếu khác với dài hạn
     if (shortTrend !== 'neutral') {
       const prediction = shortTrend === 'uptrend' ? 'T' : 'X';
       return {
@@ -191,7 +183,7 @@ class DisparityModel {
     
     const disparity = Math.abs(taiCount - xiuCount) / 12;
     
-    if (disparity >= 0.33) { // Chênh lệch 4/12 trở lên
+    if (disparity >= 0.33) {
       const prediction = taiCount > xiuCount ? 'X' : 'T';
       return {
         prediction,
@@ -214,7 +206,6 @@ class ShortTermModel {
     const results = this.historyModel.getLastResults(5);
     if (results.length < 3) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Nếu 2 kết quả gần nhất giống nhau
     if (results[results.length - 1] === results[results.length - 2]) {
       const prediction = results[results.length - 1] === 'T' ? 'X' : 'T';
       return {
@@ -244,7 +235,7 @@ class BalanceModel {
     
     const ratio = Math.max(taiCount, xiuCount) / 20;
     
-    if (ratio > 0.7) { // 70% một bên
+    if (ratio > 0.7) {
       const prediction = taiCount > xiuCount ? 'X' : 'T';
       return {
         prediction,
@@ -267,7 +258,6 @@ class DecisionModel {
     const results = this.historyModel.getLastResults(8);
     if (results.length < 8) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Kiểm tra chuỗi dài
     const lastResult = results[results.length - 1];
     let streak = 1;
     for (let i = results.length - 2; i >= 0; i--) {
@@ -276,7 +266,6 @@ class DecisionModel {
     }
 
     if (streak >= 4) {
-      // Bẻ cầu sau 4 lần cùng kết quả
       const prediction = lastResult === 'T' ? 'X' : 'T';
       return {
         prediction,
@@ -284,7 +273,6 @@ class DecisionModel {
         reason: `Chuỗi ${lastResult} dài (${streak}), dự đoán bẻ cầu với ${prediction}`
       };
     } else if (streak >= 2) {
-      // Theo cầu từ 2-3 lần
       const prediction = lastResult;
       return {
         prediction,
@@ -319,7 +307,6 @@ class WeightBalanceModel {
     const xiuRatio = xiuWeight / totalWeight;
 
     if (Math.abs(taiRatio - xiuRatio) > 0.6) {
-      // Chênh lệch lớn, điều chỉnh trọng số
       this.weightManager.adjustWeights(this.calculatePerformance(allPredictions));
       return {
         prediction: taiRatio > xiuRatio ? 'X' : 'T',
@@ -332,10 +319,9 @@ class WeightBalanceModel {
   }
 
   calculatePerformance(allPredictions) {
-    // Giả lập tính hiệu suất - trong thực tế cần so sánh với kết quả thực
     const performance = {};
     Object.keys(allPredictions).forEach(model => {
-      performance[model] = Math.random() * 0.5 + 0.3; // Giả lập hiệu suất 30-80%
+      performance[model] = Math.random() * 0.5 + 0.3;
     });
     return performance;
   }
@@ -352,12 +338,10 @@ class BadPatternModel {
     const results = this.historyModel.getLastResults(10);
     if (results.length < 10) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Tính độ biến động
     const values = results.map(r => r === 'T' ? 1 : 0);
     const deviation = this.statsModel.calculateDeviation(values);
 
     if (deviation < 0.3) {
-      // Biến động thấp, có thể là cầu xấu
       return {
         prediction: null,
         confidence: 0,
@@ -379,7 +363,6 @@ class ExtendedPatternModel {
     const results = this.historyModel.getLastResults(15);
     if (results.length < 8) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Phát hiện cầu 3-1 (TTTX hoặc XXXT)
     const lastFour = results.slice(-4).join('');
     if (lastFour === 'TTTX' || lastFour === 'XXXT') {
       const prediction = lastFour === 'TTTX' ? 'X' : 'T';
@@ -390,7 +373,6 @@ class ExtendedPatternModel {
       };
     }
 
-    // Phát hiện cầu 2-2 (TTXX hoặc XXTT)
     if (results.length >= 5) {
       const pattern = results.slice(-5).join('');
       if (pattern === 'TTXXT' || pattern === 'XXTTX') {
@@ -418,7 +400,6 @@ class BreakProbabilityModel {
     const results = this.historyModel.getLastResults(20);
     if (results.length < 10) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Phân tích lịch sử để tính xác suất bẻ cầu
     const breakPoints = [];
     for (let i = 2; i < results.length; i++) {
       if (results[i] !== results[i - 1] && results[i - 1] === results[i - 2]) {
@@ -462,7 +443,6 @@ class DiceAnalysisModel {
     const results = this.historyModel.getLastResults(30);
     if (results.length < 20) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Phân tích chu kỳ và xu hướng
     const taiProb = this.statsModel.calculateProbability(results, 'T');
     const recentTaiProb = this.statsModel.calculateProbability(results.slice(-10), 'T');
 
@@ -489,7 +469,6 @@ class MultiPatternModel {
     const results = this.historyModel.getLastResults(8);
     if (results.length < 6) return { prediction: null, confidence: 0, reason: "Không đủ dữ liệu" };
 
-    // Kiểm tra nhiều mẫu ngắn
     const patterns = {
       'TXT': { next: 'X', confidence: 0.6 },
       'XTX': { next: 'T', confidence: 0.6 },
@@ -523,7 +502,6 @@ class PerformanceModel {
   addResult(result) {
     this.actualResults.push(result);
     
-    // Cập nhật hiệu suất các model
     Object.keys(this.predictions).forEach(model => {
       const isCorrect = this.predictions[model] === result;
       // Logic cập nhật hiệu suất ở đây
@@ -536,7 +514,6 @@ class PerformanceModel {
       this.predictions[model] = allPredictions[model].prediction;
     });
 
-    // Trả về đánh giá hiệu suất
     return {
       prediction: null,
       confidence: 0,
@@ -547,13 +524,14 @@ class PerformanceModel {
 
 // ==================== HỆ THỐNG TỔNG HỢP ====================
 
-class PredictionSystem {
+class MasterPredictor {
   constructor() {
     this.historyModel = new HistoryModel();
     this.statsModel = new StatsModel();
     this.weightManager = new WeightManager();
+    this.correctPredictions = 0;
+    this.totalPredictions = 0;
     
-    // Khởi tạo các model
     this.models = {
       model1: new BasicPatternModel(this.historyModel),
       model2: new TrendAnalysisModel(this.historyModel),
@@ -571,71 +549,65 @@ class PredictionSystem {
     };
   }
 
-  addResult(result) {
-    this.historyModel.addResult(result);
-    this.models.model13.addResult(result);
+  async updateData(data) {
+    this.historyModel.addResult(data);
+    this.models.model13.addResult(data.result === 'Tài' ? 'T' : 'X');
   }
 
-  predict() {
+  async predict() {
     const allPredictions = {};
     
-    // Thu thập dự đoán từ tất cả models
     Object.keys(this.models).forEach(modelKey => {
-      if (modelKey !== 'model13') { // Model13 xử lý riêng
+      if (modelKey !== 'model13' && modelKey !== 'model7') {
         allPredictions[modelKey] = this.models[modelKey].analyze();
       }
     });
     
-    // Thêm dự đoán từ model7 (cân bằng trọng số)
     allPredictions.model7 = this.models.model7.analyze(allPredictions);
-    
-    // Thêm đánh giá từ model13
     allPredictions.model13 = this.models.model13.analyze(allPredictions);
     
-    // Tính toán dự đoán cuối cùng
     return this.calculateFinalPrediction(allPredictions);
   }
 
   calculateFinalPrediction(allPredictions) {
     let taiScore = 0;
     let xiuScore = 0;
-    let reasons = [];
-
+    
     Object.keys(allPredictions).forEach(modelKey => {
       const prediction = allPredictions[modelKey];
+      const weight = this.weightManager.weights[modelKey] || 1.0;
+      
       if (prediction.prediction) {
-        const weight = this.weightManager.weights[modelKey] || 1.0;
-        const score = prediction.confidence * weight;
-        
         if (prediction.prediction === 'T') {
-          taiScore += score;
+          taiScore += prediction.confidence * weight;
         } else if (prediction.prediction === 'X') {
-          xiuScore += score;
-        }
-        
-        if (prediction.reason) {
-          reasons.push(`${modelKey}: ${prediction.reason}`);
+          xiuScore += prediction.confidence * weight;
         }
       }
     });
 
-    // Xác định dự đoán cuối cùng
-    let finalPrediction = null;
+    let finalPrediction = '?';
     let confidence = 0;
-    
-    if (taiScore > xiuScore && taiScore > 0) {
-      finalPrediction = 'T';
-      confidence = taiScore / (taiScore + xiuScore);
-    } else if (xiuScore > taiScore && xiuScore > 0) {
-      finalPrediction = 'X';
-      confidence = xiuScore / (taiScore + xiuScore);
-    }
+    const totalScore = taiScore + xiuScore;
 
+    if (totalScore > 0) {
+      if (taiScore > xiuScore) {
+        finalPrediction = 'T';
+        confidence = taiScore / totalScore;
+      } else if (xiuScore > taiScore) {
+        finalPrediction = 'X';
+        confidence = xiuScore / totalScore;
+      } else {
+        finalPrediction = '?';
+        confidence = 0;
+      }
+    }
+    
     return {
       prediction: finalPrediction,
       confidence: confidence,
-      reasons: reasons
     };
   }
 }
-module.exports = { PredictionSystem };
+
+module.exports = { MasterPredictor };
