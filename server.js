@@ -26,7 +26,7 @@ let apiResponseData = {
 let lastPrediction = null; 
 const fullHistory = []; 
 
-const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9m_hZMZ_m5gMNhkw0";
+const WEBSOCKET_URL = "wss://websocket.azhkthg1.net/websocket?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhbW91bnQiOjAsInVzZXJuYW1lIjoiU0NfYXBpc3Vud2luMTIzIn0.hgrRbSV6vnBwJMg9ZFtbx3rRu9mX_hZMZ_m5gMNhkw0";
 const WS_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
     "Origin": "https://play.sun.win"
@@ -90,7 +90,13 @@ function connectWebSocket() {
                         predictor.correctPredictions++;
                         correctnessStatus = "ĐÚNG";
                     } else {
-                        correctnessStatus = "SAI";
+                        // #############################################
+                        // ###### START: SỬA LỖI HIỂN THỊ ĐÚNG/SAI ######
+                        // #############################################
+                        correctnessStatus = "SAI"; // Thêm dòng này để ghi nhận dự đoán SAI
+                        // ###########################################
+                        // ###### END: SỬA LỖI HIỂN THỊ ĐÚNG/SAI ######
+                        // ###########################################
                     }
                     predictor.totalPredictions++;
                 }
@@ -98,10 +104,8 @@ function connectWebSocket() {
                 const winRate = predictor.totalPredictions === 0 ? "0%" : `${((predictor.correctPredictions / predictor.totalPredictions) * 100).toFixed(0)}%`;
                 apiResponseData.ty_le_thang_lich_su = winRate;
                 
-                // Cập nhật thuật toán với dữ liệu mới
                 await predictor.updateData({ result: result, score: total });
                 
-                // Lấy dự đoán mới
                 const predictionResult = await predictor.predict();
                 
                 apiResponseData.ket_qua = result;
@@ -112,7 +116,6 @@ function connectWebSocket() {
                 
                 console.log(`Phiên #${apiResponseData.phien}: ${total} (${result}) | Dự đoán mới: ${apiResponseData.du_doan} | Tin cậy: ${apiResponseData.do_tin_cay} | Tỷ lệ thắng: ${apiResponseData.ty_le_thang_lich_su}`);
 
-                // Thêm vào lịch sử đầy đủ
                 fullHistory.push({
                     phien: apiResponseData.phien,
                     xuc_xac_1: d1,
@@ -148,23 +151,61 @@ app.get('/sunlon', (req, res) => {
     res.send(JSON.stringify(apiResponseData, null, 4));
 });
 
+// ########################################################
+// ###### START: TRANG TRÍ LẠI TRANG LỊCH SỬ ##############
+// ########################################################
 app.get('/history', (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     let html = `<style>
-                    body{font-family: monospace; background-color: #121212; color: #e0e0e0; padding: 20px;}
-                    h2{color: #4e8af4; text-align: center; margin-bottom: 20px;}
-                    .container{max-width: 600px; margin: auto;}
-                    .entry{border-bottom: 1px solid #444; padding: 10px; margin-bottom: 10px; background-color: #1e1e1e; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);}
-                    .entry:last-child{border-bottom: none;}
-                    .result-tai{color: #28a745; font-weight: bold;}
-                    .result-xiu{color: #dc3545; font-weight: bold;}
-                    .status-dung{color: #28a745; font-weight: bold;}
-                    .status-sai{color: #dc3545; font-weight: bold;}
-                    .dice-img {width: 24px; height: 24px; vertical-align: middle; margin-right: 2px;}
-                    .dice-container {display: flex; align-items: center;}
+                    body { 
+                        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+                        background-color: #1a1a1d; 
+                        color: #c5c6c7; 
+                        padding: 20px; 
+                        line-height: 1.6;
+                    }
+                    .container { max-width: 700px; margin: auto; }
+                    h2 { 
+                        color: #66fcf1; 
+                        text-align: center; 
+                        margin-bottom: 25px; 
+                        border-bottom: 2px solid #45a29e; 
+                        padding-bottom: 10px; 
+                        font-weight: 300;
+                        letter-spacing: 1px;
+                    }
+                    .entry {
+                        background-color: #2c3e50;
+                        border: 1px solid #34495e;
+                        border-left: 5px solid #66fcf1;
+                        padding: 15px 20px;
+                        margin-bottom: 15px;
+                        border-radius: 8px;
+                        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                    }
+                    .entry div { display: flex; align-items: center; }
+                    .label { color: #95a5a6; min-width: 80px; }
+                    .value { font-weight: bold; }
+                    .result-tai { color: #2ecc71; }
+                    .result-xiu { color: #e74c3c; }
+                    .status-dung { color: #2ecc71; }
+                    .status-sai { color: #e74c3c; }
+                    .dice-img { 
+                        width: 24px; 
+                        height: 24px; 
+                        margin: 0 3px;
+                        background-color: #fff;
+                        border-radius: 4px;
+                        padding: 2px;
+                    }
+                    .dice-container { gap: 5px; }
+                    .total-score { color: #bdc3c7; margin-left: 8px; font-size: 0.9em; }
                 </style>
                 <div class="container">
-                    <h2>🎯 Lịch sử ${fullHistory.length} phiên gần nhất</h2>`;
+                    <h2>🎯 LỊCH SỬ ${fullHistory.length} PHIÊN GẦN NHẤT</h2>`;
 
     if (fullHistory.length === 0) {
         html += '<p style="text-align: center;">Chưa có dữ liệu lịch sử.</p>';
@@ -173,24 +214,28 @@ app.get('/history', (req, res) => {
             const resultClass = h.ket_qua === 'Tài' ? 'result-tai' : 'result-xiu';
             let statusHtml = '';
             if (h.trang_thai === "ĐÚNG") {
-                statusHtml = ` <span class="status-dung">✅ ĐÚNG</span>`;
+                statusHtml = `<span class="status-dung value">✅ ĐÚNG</span>`;
             } else if (h.trang_thai === "SAI") {
-                statusHtml = ` <span class="status-sai">❌ SAI</span>`;
+                statusHtml = `<span class="status-sai value">❌ SAI</span>`;
             }
 
             const predictionHtml = h.du_doan && h.du_doan !== "?"
-                ? `<div>- Dự đoán: <b>${h.du_doan}</b>${statusHtml}</div>`
+                ? `<div><span class="label">Dự đoán:</span> <span class="value">${h.du_doan}</span> ${statusHtml}</div>`
                 : '';
+            
+            // Sửa link ảnh xúc xắc
+            const diceImageURL = 'https://i.imgur.com/YDc3wz6.png'; // Link ảnh mới hoạt động
 
             html += `<div class="entry">
-                        <div>- Phiên: <b>${h.phien}</b></div>
+                        <div><span class="label">Phiên:</span> <span class="value">#${h.phien}</span></div>
                         ${predictionHtml}
-                        <div>- Kết quả: <span class="${resultClass}">${h.ket_qua}</span></div>
-                        <div class="dice-container">- Xúc xắc: 
-                            <img src="https://i.imgur.com/vHqB37o.png" alt="dice" class="dice-img" style="filter: hue-rotate(${h.xuc_xac_1 * 60}deg);">
-                            <img src="https://i.imgur.com/vHqB37o.png" alt="dice" class="dice-img" style="filter: hue-rotate(${h.xuc_xac_2 * 60}deg);">
-                            <img src="https://i.imgur.com/vHqB37o.png" alt="dice" class="dice-img" style="filter: hue-rotate(${h.xuc_xac_3 * 60}deg);">
-                            (Tổng: ${h.tong})
+                        <div><span class="label">Kết quả:</span> <span class="${resultClass} value">${h.ket_qua}</span></div>
+                        <div class="dice-container">
+                            <span class="label">Xúc xắc:</span> 
+                            <img src="${diceImageURL}" alt="dice ${h.xuc_xac_1}" class="dice-img">
+                            <img src="${diceImageURL}" alt="dice ${h.xuc_xac_2}" class="dice-img">
+                            <img src="${diceImageURL}" alt="dice ${h.xuc_xac_3}" class="dice-img">
+                            <span class="total-score">(Tổng: ${h.tong})</span>
                         </div>
                      </div>`;
         });
@@ -198,6 +243,10 @@ app.get('/history', (req, res) => {
     html += `</div>`;
     res.send(html);
 });
+// ######################################################
+// ###### END: TRANG TRÍ LẠI TRANG LỊCH SỬ ##############
+// ######################################################
+
 
 app.get('/', (req, res) => {
     res.send(`<h2>🎯 API Phân Tích Sunwin Tài Xỉu</h2><p>Xem kết quả JSON: <a href="/sunlon">/sunlon</a></p><p>Xem lịch sử các phiên: <a href="/history">/history</a></p>`);
@@ -207,4 +256,3 @@ app.listen(PORT, () => {
     console.log(`[🌐] Server is running at http://localhost:${PORT}`);
     connectWebSocket();
 });
-
